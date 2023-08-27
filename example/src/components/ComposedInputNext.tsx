@@ -1,11 +1,6 @@
 import { TextInput } from "@/components/TextInput";
-import {
-  SForm,
-  SFormContext,
-  useNField,
-  useSignal,
-  useSignalEffect,
-} from "sigform";
+import { useSignal, useSignalEffect } from "@preact/signals-react";
+import { SForm, SFormContext, useSField } from "sigform";
 
 type Props = {
   name: string;
@@ -23,32 +18,37 @@ const parse = (composed: string) => {
   return {};
 };
 
+// Complex composed input example.
 export const ComposedInputNext = (props: Props) => {
   const { name } = props;
 
   const composed = useSignal("");
-  const { defaultValue } = useNField(name, composed);
+  const { defaultValue } = useSField(name, composed);
 
   return (
     <SForm initialData={parse(defaultValue || "")}>
       {() => {
+        // With "renderless component" (`<SForm>{() => {}]</SForm>`) syntax, you can access nested fields in here.
         const { watchData, reset } = SFormContext.useContainer();
 
+        // Join 3 input results.
         const joined = watchData((data): string => {
           return [data.first, data.second, data.third].join("-");
         });
 
         useSignalEffect(() => {
-          // Apply joined value into parent.
+          // Broadcast joined value into parent.
           composed.value = joined.value;
         });
 
         useSignalEffect(() => {
+          // Apply "composed.value" changes from outside (eg: `reset` on submit).
           reset(parse(composed.value));
         });
 
         return (
           <div className="flex flex-col items-start">
+            {/* You can nest other input(field) as below */}
             <TextInput label="first" name="first" />
             <TextInput label="second" name="second" />
             <TextInput label="third" name="third" />

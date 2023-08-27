@@ -14,8 +14,6 @@ import {
 import { useId } from "react";
 import { createPortal } from "react-dom";
 
-export * from "@preact/signals-react";
-
 export type SFormField<T> = {
   name: string;
   value: Signal<T>;
@@ -29,8 +27,8 @@ export type SFormContextProps = {
   initialData?: SFormData;
 };
 
-const useSFormContext = (initialState: SFormContextProps) => {
-  const { initialData } = initialState;
+const useSFormContext = (initialState?: SFormContextProps) => {
+  const initialData = initialState?.initialData || {};
 
   // Make each form has uniqueId over universal rendering (SSR vs CSR).
   // SEE: [Generating unique ID's and SSR (for a11y and more) · Issue #5867 · facebook/react](https://github.com/facebook/react/issues/5867)
@@ -134,7 +132,7 @@ const useSFormContext = (initialState: SFormContextProps) => {
   }, []);
 
   const setFieldValues = useCallback((data: SFormData = {}) => {
-    data.forEach((value, name) => setFieldValue(name, value));
+    data.forEach((value: any, name: string) => setFieldValue(name, value));
   }, []);
 
   return {
@@ -159,7 +157,7 @@ const useSFormContext = (initialState: SFormContextProps) => {
 
 export const SFormContext = createContainer(useSFormContext);
 
-export const useNField = <T,>(name: string, signal: Signal<T>) => {
+export const useSField = <T,>(name: string, signal: Signal<T>) => {
   const {
     initialData,
     errors,
@@ -197,7 +195,7 @@ export const useNField = <T,>(name: string, signal: Signal<T>) => {
   // Watch field changes.
   const watchField = useCallback(function <T>(
     fieldName: string,
-    cb: (value: Signal<T>) => T,
+    cb: (value: Signal<T> | null) => T,
   ) {
     return useComputed(() => cb(getFieldValue(fieldName)));
   }, []);

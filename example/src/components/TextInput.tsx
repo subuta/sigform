@@ -1,21 +1,26 @@
+import { useSignal, useSignalEffect } from "@preact/signals-react";
 import cx from "classnames";
-import { useNField, useSignal, useSignalEffect } from "sigform";
+import { useSField } from "sigform";
 
 type Props = {
   label: string;
   name: string;
 };
 
+// Simple text input.
 export const TextInput = (props: Props) => {
   const { label, name } = props;
 
   const text = useSignal("");
-  const { formId, setError, clearError, error } = useNField(name, text);
+  const { formId, setError, clearError, error } = useSField(name, text);
 
+  // Validation example.
   useSignalEffect(() => {
     if (text.value === "error") {
+      // set error on some condition.
       setError("error is error :(");
     } else {
+      // or clear error otherwise.
       clearError();
     }
   });

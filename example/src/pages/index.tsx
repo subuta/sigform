@@ -7,6 +7,7 @@ export default function Index() {
       <SForm
         onSubmit={(data, { reset }) => {
           console.log("submit!", data);
+          // Reset form after submit.
           reset();
         }}
         initialData={{

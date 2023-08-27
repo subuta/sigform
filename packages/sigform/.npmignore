@@ -1,0 +1,3 @@
+src/__tests__/
+src/sum.ts
+jest.config.js
