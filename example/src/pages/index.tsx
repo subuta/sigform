@@ -1,5 +1,5 @@
-import { SForm } from "sigform";
 import { ComposedInputNext } from "@/components/ComposedInputNext";
+import { SForm } from "sigform";
 
 export default function Index() {
   return (

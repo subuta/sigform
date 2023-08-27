@@ -1,4 +1,6 @@
-import { createContainer } from "unstated-next";
+import { createContainer } from "./lib/unstated-next";
+import { ReadonlySignal, Signal, useComputed } from "@preact/signals-react";
+import dot from "dot-object";
 import {
   ComponentType,
   HTMLProps,
@@ -10,10 +12,9 @@ import {
   useState,
 } from "react";
 import { useId } from "react";
-import dot from "dot-object";
 import { createPortal } from "react-dom";
 
-import { ReadonlySignal, Signal, useComputed } from "@preact/signals-react";
+export * from "@preact/signals-react";
 
 export type SFormField<T> = {
   name: string;

@@ -1,4 +1,4 @@
-import { add } from "./sum";
+import { add } from "../sum";
 
 describe("test", () => {
   it("should test the truth", () => {
