@@ -1,4 +1,5 @@
-import { useSignal, useSignalEffect, useNField } from "sigform";
+import { useNField } from "sigform";
+import { useSignal, useSignalEffect } from "@preact/signals-react";
 import cx from "classnames";
 
 type Props = {

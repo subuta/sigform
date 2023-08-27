@@ -1,11 +1,6 @@
-import {
-  useSignal,
-  useSignalEffect,
-  SForm,
-  SFormContext,
-  useNField,
-} from "sigform";
+import { SForm, SFormContext, useNField } from "sigform";
 import { TextInput } from "@/components/TextInput";
+import { useSignal, useSignalEffect } from "@preact/signals-react";
 
 type Props = {
   name: string;

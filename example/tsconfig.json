@@ -6,6 +6,9 @@
       "esnext"
     ],
     "paths": {
+      "sigform": [
+        "../packages/sigform/src/SForm.tsx"
+      ],
       "@/*": [
         "./src/*"
       ]

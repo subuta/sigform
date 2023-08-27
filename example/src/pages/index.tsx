@@ -7,7 +7,7 @@ export default function Index() {
       <SForm
         onSubmit={(data, { reset }) => {
           console.log("submit!", data);
-          // reset();
+          reset();
         }}
         initialData={{
           composed: "123-456-789",

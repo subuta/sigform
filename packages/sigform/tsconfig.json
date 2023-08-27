@@ -6,7 +6,6 @@
       "esnext"
     ],
     "paths": {
-
       "@/*": ["./src/*"]
     },
     "allowJs": true,

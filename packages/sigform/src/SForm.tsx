@@ -14,7 +14,6 @@ import dot from "dot-object";
 import { createPortal } from "react-dom";
 
 import { ReadonlySignal, Signal, useComputed } from "@preact/signals-react";
-export * from "@preact/signals-react";
 
 export type SFormField<T> = {
   name: string;
