@@ -5,6 +5,8 @@ for allowing developer to construct complex form UI without hassle.
 
 We follows simplified [unform](https://github.com/unform/unform) APIs.
 
+Current `v0.10.x` is alpha(frequently updating) version. be careful to use it.
+
 ## Installation
 
 This library is distributed as "ESM package" and uses TypeScript. 

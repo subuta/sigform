@@ -1,5 +1,11 @@
 import { createContainer } from "./lib/unstated-next";
-import { ReadonlySignal, Signal, useComputed } from "@preact/signals-react";
+import {
+  ReadonlySignal,
+  Signal,
+  untracked,
+  useComputed,
+  useSignal,
+} from "@preact/signals-react";
 import dot from "dot-object";
 import {
   ComponentType,
@@ -8,7 +14,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useId } from "react";
@@ -33,7 +38,8 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   // Make each form has uniqueId over universal rendering (SSR vs CSR).
   // SEE: [Generating unique ID's and SSR (for a11y and more) · Issue #5867 · facebook/react](https://github.com/facebook/react/issues/5867)
   const formId = useId();
-  const fields = useRef<SFormField<any>[]>([]);
+  // const fields = useRef<SFormField<any>[]>([]);
+  const fields = useSignal<SFormField<any>[]>([]);
   const [errors, setErrors] = useState<SFormErrors>({});
 
   const registerField = useCallback(function <T>(field: SFormField<T>) {
@@ -41,23 +47,17 @@ const useSFormContext = (initialState?: SFormContextProps) => {
     if (!field.initialValue) {
       field.initialValue = field.value.peek();
     }
-    fields.current.push(field);
+    fields.value = [...fields.value, field];
   }, []);
 
   const unRegisterField = useCallback((fieldName: string) => {
-    const fieldIndex = fields.current.findIndex(
-      (field) => field.name === fieldName,
-    );
-
-    if (fieldIndex > -1) {
-      fields.current.splice(fieldIndex, 1);
-    }
+    fields.value = fields.value.filter((field) => field.name !== fieldName);
   }, []);
 
   const getData = useCallback(() => {
     const data: SFormData = {};
 
-    fields.current.forEach((field) => {
+    fields.value.forEach((field) => {
       const signal = field.value;
       data[field.name] = signal.value;
     });
@@ -69,7 +69,7 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   }, []);
 
   const getField = useCallback((fieldName: string) => {
-    return fields.current.find((field) => field.name === fieldName);
+    return fields.value.find((field) => field.name === fieldName);
   }, []);
 
   // Get field's value.
@@ -122,8 +122,8 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   }, []);
 
   const reset = useCallback((data: SFormData = {}) => {
-    fields.current.forEach(({ name }) => {
-      if (data[name]) {
+    fields.value.forEach(({ name }) => {
+      if (data[name] === undefined) {
         setFieldValue(name, data[name]);
       } else {
         clearFieldValue(name);
@@ -181,16 +181,23 @@ export const useSField = <T,>(name: string, signal: Signal<T>) => {
     return errors[name];
   }, [errors, name]);
 
-  // Always unregister  on unmount.
   useEffect(() => {
     // Apply defaultValue on mount automatically.
     if (defaultValue) {
       signal.value = defaultValue;
     }
+
+    // Automatically register on mount.
+    registerField({
+      name,
+      value: signal,
+    });
+
     return () => {
+      // Also automatically unregister on unmount.
       unRegisterField(name);
     };
-  }, [name]);
+  }, []);
 
   // Watch field changes.
   const watchField = useCallback(function <T>(
@@ -214,17 +221,6 @@ export const useSField = <T,>(name: string, signal: Signal<T>) => {
   const clearField = useCallback(() => {
     clearFieldValue(name);
   }, [clearFieldValue, name]);
-
-  // SEE: [javascript - Make React useEffect hook not run on initial render - Stack Overflow](https://stackoverflow.com/a/53254028)
-  // Do register on initial render.
-  const initial = useRef(true);
-  if (initial.current) {
-    initial.current = false;
-    registerField({
-      name,
-      value: signal,
-    });
-  }
 
   return {
     defaultValue,

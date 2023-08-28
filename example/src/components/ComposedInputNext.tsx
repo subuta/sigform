@@ -1,5 +1,5 @@
 import { TextInput } from "@/components/TextInput";
-import { useSignal, useSignalEffect } from "@preact/signals-react";
+import { untracked, useSignal, useSignalEffect } from "@preact/signals-react";
 import { SForm, SFormContext, useSField } from "sigform";
 
 type Props = {
@@ -42,8 +42,10 @@ export const ComposedInputNext = (props: Props) => {
         });
 
         useSignalEffect(() => {
-          // Apply "composed.value" changes from outside (eg: `reset` on submit).
-          reset(parse(composed.value));
+          // Broadcast "reset" changes to nested forms.
+          if (!composed.value) {
+            reset();
+          }
         });
 
         return (

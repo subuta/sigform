@@ -36,7 +36,7 @@ export const TextInput = (props: Props) => {
         onChange={(e) => {
           text.value = e.target.value;
         }}
-        value={text.value}
+        value={text.value || ""}
       />
 
       {error && <p className="font-bold">{error}</p>}
