@@ -1,10 +1,4 @@
-import {
-  SForm,
-  deepSignal,
-  deepSignalToJson,
-  isSignal,
-  setDeepSignal,
-} from "@/.";
+import { deepSignal, isSignal, setDeepSignal } from "@/.";
 import { Signal, effect, signal } from "@preact/signals-react";
 import "@testing-library/jest-dom";
 import React from "react";
@@ -61,7 +55,7 @@ describe("deepSignal", () => {
       const spy = jest.fn();
 
       effect(() => {
-        spy(deepSignalToJson(data));
+        spy(data.toJSON());
       });
 
       // Update deeply nested value
@@ -78,7 +72,7 @@ describe("deepSignal", () => {
       const spy = jest.fn();
 
       effect(() => {
-        spy(deepSignalToJson(data));
+        spy(data.toJSON());
       });
 
       expect(spy.mock.calls[0][0]).toEqual([{ hoge: "fuga" }]);
@@ -99,7 +93,7 @@ describe("deepSignal", () => {
 
       // Remove item from array
       data.value = data.value.filter((v: Signal<any>) => {
-        const data = deepSignalToJson(v);
+        const data = v.toJSON();
         return data.hoge;
       });
       expect(spy.mock.calls[3][0]).toEqual([{ hoge: "fuga" }]);

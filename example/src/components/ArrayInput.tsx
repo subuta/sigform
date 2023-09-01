@@ -2,7 +2,7 @@ import { TextInput } from "@/components/TextInput";
 import { v4 as uuid } from "@lukeed/uuid";
 import { Signal } from "@preact/signals-react";
 import React, { useCallback } from "react";
-import { deepSignal, deepSignalToJson, useSField } from "sigform";
+import { DeepSignal, deepSignal, useSField } from "sigform";
 
 export type Row = {
   key: string;
@@ -14,13 +14,13 @@ const getNewRow = (text: string) => ({ key: uuid(), text });
 export const ArrayInput = (props: { name: string }) => {
   const { name } = props;
 
-  const [array] = useSField<Signal<Row>[]>(name, {
+  const [array] = useSField<DeepSignal<Row>[]>(name, {
     clearValue: [],
   });
 
   const remove = useCallback((key: string) => {
     array.value = array.value.filter((signal) => {
-      const row = deepSignalToJson(signal) as Row;
+      const row = signal.toJSON();
       return row.key !== key;
     });
   }, []);
@@ -34,7 +34,7 @@ export const ArrayInput = (props: { name: string }) => {
       <div className="flex flex-col">
         {array.value.map(
           useCallback((signal, i) => {
-            const row = deepSignalToJson(signal) as Row;
+            const row = signal.toJSON();
             const { key, text } = row;
 
             return (

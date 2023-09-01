@@ -1,4 +1,4 @@
-import { deepSignalToJson, useDeepSignal } from "./deepSignal";
+import { useDeepSignal } from "./deepSignal";
 import { SFormHelpers } from "@/useSField";
 import {
   ReadonlySignal,
@@ -68,7 +68,7 @@ export const useSFormContext = (ctx?: SFormContextProps) => {
 
   const getData = useCallback(() => {
     // Return serialized deepSignal data.
-    return deepSignalToJson(data);
+    return data.toJSON();
   }, []);
 
   const getField = useCallback((fieldName: string) => {

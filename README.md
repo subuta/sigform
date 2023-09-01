@@ -82,7 +82,7 @@ export const EmailInput = (props: { name: string }) => {
 
 ### TODOs
 
-- [ ] Add tests.
+- [x] Add tests.
 - [ ] Add more examples.
 - [ ] Add JS transpilation setup for distribution.
 

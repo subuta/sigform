@@ -1,5 +1,5 @@
 import { SFieldOpts, SFormContext, useSFormContext } from "./SForm";
-import { getDeepSignal } from "./deepSignal";
+import { DeepSignal, getDeepSignal } from "./deepSignal";
 import { signal as createSignal } from "@preact/signals-core";
 import { Signal, useComputed } from "@preact/signals-react";
 import { useCallback, useEffect, useMemo } from "react";
@@ -27,7 +27,7 @@ const useRawSField = <T>(name: string, opts?: SFieldOpts) => {
     invariant(data.value[name], `${name} not found in initialData`);
   }
 
-  const signal: Signal<T> = useMemo(() => {
+  const signal: DeepSignal<T> = useMemo(() => {
     const signal = getDeepSignal(data, name);
     if (signal !== undefined) {
       return signal;
@@ -97,7 +97,7 @@ type SFieldHelpers<T> = Omit<ReturnType<typeof useRawSField<T>>, "signal">;
 export const useSField = <T>(
   name: string,
   opts?: SFieldOpts,
-): [Signal<T>, SFieldHelpers<T>] => {
+): [DeepSignal<T>, SFieldHelpers<T>] => {
   const { signal, ...rest } = useRawSField<T>(name, opts);
   return [signal, rest];
 };

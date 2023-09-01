@@ -40,32 +40,42 @@ export const getDeepSignal = (
   }, obj.value);
 };
 
-export const deepSignalToJson = (data: Signal<any>): any => {
+export const deepSignalToJSON = (data: Signal<any>): any => {
   if (!isSignal(data)) return data;
 
   if (Array.isArray(data.value)) {
-    return data.value.map((v) => deepSignalToJson(v));
+    return data.value.map((v) => deepSignalToJSON(v));
   } else if (isObject(data.value)) {
     const obj = data.value as Record<string, any>;
     return Object.keys(obj).reduce(
       (acc, k) => {
-        acc[k] = deepSignalToJson(obj[k]);
+        acc[k] = deepSignalToJSON(obj[k]);
         return acc;
       },
       {} as Record<string, any>,
     );
   }
 
-  return deepSignalToJson(data.value);
+  return deepSignalToJSON(data.value);
+};
+
+export type DeepSignal<T> = Signal<T> & {
+  toJSON: () => T;
+};
+
+const asDeepSignal = <T>(data: any): DeepSignal<T> => {
+  const s = signal(data) as DeepSignal<any>;
+  s.toJSON = () => deepSignalToJSON(s);
+  return s;
 };
 
 // Create signal recursively.
-export const deepSignal = (data: any): Signal<any> => {
+export const deepSignal = (data: any): DeepSignal<any> => {
   if (Array.isArray(data)) {
-    return signal(data.map((v) => deepSignal(v)));
+    return asDeepSignal(data.map((v) => deepSignal(v)));
   } else if (isObject(data)) {
     const obj = data as Record<string, any>;
-    return signal(
+    return asDeepSignal(
       Object.keys(obj).reduce(
         (acc, k) => {
           acc[k] = deepSignal(obj[k]);
@@ -78,7 +88,7 @@ export const deepSignal = (data: any): Signal<any> => {
     // Pass-through if "signal" instance passed.
     return data;
   }
-  return signal(data);
+  return asDeepSignal(data);
 };
 
 // deep version of "useSignal"
