@@ -1,28 +1,31 @@
-import { createContainer } from "./lib/unstated-next";
+import { deepSignalToJson, useDeepSignal } from "./deepSignal";
+import { SFormHelpers } from "@/useSField";
 import {
   ReadonlySignal,
   Signal,
-  untracked,
   useComputed,
   useSignal,
 } from "@preact/signals-react";
-import dot from "dot-object";
-import {
+import { flatten } from "flat";
+import React, {
   ComponentType,
   HTMLProps,
   ReactNode,
+  memo,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { useId } from "react";
 import { createPortal } from "react-dom";
+import isEqual from "react-fast-compare";
+import { createContainer } from "unstated-next";
 
 export type SFormField<T> = {
   name: string;
   value: Signal<T>;
   initialValue?: T;
+  clearValue?: T;
 };
 
 export type SFormData = Record<string, any>;
@@ -30,10 +33,14 @@ export type SFormErrors = Record<string, string | undefined>;
 
 export type SFormContextProps = {
   initialData?: SFormData;
+  strict?: boolean;
 };
 
-const useSFormContext = (initialState?: SFormContextProps) => {
-  const initialData = initialState?.initialData || {};
+export const useSFormContext = (ctx?: SFormContextProps) => {
+  const data = useDeepSignal<Record<string, Signal<any>>>(
+    ctx?.initialData || {},
+  );
+  const strict = ctx?.strict || false;
 
   // Make each form has uniqueId over universal rendering (SSR vs CSR).
   // SEE: [Generating unique ID's and SSR (for a11y and more) · Issue #5867 · facebook/react](https://github.com/facebook/react/issues/5867)
@@ -42,9 +49,14 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   const fields = useSignal<SFormField<any>[]>([]);
   const [errors, setErrors] = useState<SFormErrors>({});
 
+  const setErrorsIfChanged = (nextErrors: SFormErrors) => {
+    if (isEqual(nextErrors, errors)) return;
+    setErrors(nextErrors);
+  };
+
   const registerField = useCallback(function <T>(field: SFormField<T>) {
     // Keep copy of initialValue for later usage.
-    if (!field.initialValue) {
+    if (field.initialValue === undefined) {
       field.initialValue = field.value.peek();
     }
     fields.value = [...fields.value, field];
@@ -55,17 +67,8 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   }, []);
 
   const getData = useCallback(() => {
-    const data: SFormData = {};
-
-    fields.value.forEach((field) => {
-      const signal = field.value;
-      data[field.name] = signal.value;
-    });
-
-    // Parse key and construct resulting object.
-    dot.object(data);
-
-    return data;
+    // Return serialized deepSignal data.
+    return deepSignalToJson(data);
   }, []);
 
   const getField = useCallback((fieldName: string) => {
@@ -87,17 +90,15 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   );
 
   const setFormErrors = useCallback((formErrors: SFormErrors) => {
-    const parsedErrors = dot.dot(formErrors);
-
-    setErrors(parsedErrors);
+    setErrorsIfChanged(flatten(formErrors));
   }, []);
 
-  const clearFieldError = useCallback((fieldName: string) => {
-    setErrors((state) => ({ ...state, [fieldName]: undefined }));
-  }, []);
+  const clearFieldError = (fieldName: string) => {
+    setErrorsIfChanged({ ...errors, [fieldName]: undefined });
+  };
 
   const setFieldError = (fieldName: string, error: any) => {
-    setErrors((state) => ({ ...state, [fieldName]: error }));
+    setErrorsIfChanged({ ...errors, [fieldName]: error });
   };
 
   const setFieldValue = useCallback((fieldName: string, value: any) => {
@@ -112,18 +113,18 @@ const useSFormContext = (initialState?: SFormContextProps) => {
 
   const clearFieldValue = useCallback((fieldName: string) => {
     const field = getField(fieldName);
-
     if (!field) {
       return false;
     }
 
     // Restore initialValue on "clear".
-    field.value.value = field.initialValue;
+    const hasClearValue = field.clearValue !== undefined;
+    field.value.value = hasClearValue ? field.clearValue : field.initialValue;
   }, []);
 
   const reset = useCallback((data: SFormData = {}) => {
     fields.value.forEach(({ name }) => {
-      if (data[name] === undefined) {
+      if (data[name] !== undefined) {
         setFieldValue(name, data[name]);
       } else {
         clearFieldValue(name);
@@ -136,7 +137,8 @@ const useSFormContext = (initialState?: SFormContextProps) => {
   }, []);
 
   return {
-    initialData,
+    data,
+    strict,
     errors,
     formId,
     setFormErrors,
@@ -157,94 +159,16 @@ const useSFormContext = (initialState?: SFormContextProps) => {
 
 export const SFormContext = createContainer(useSFormContext);
 
-export const useSField = <T,>(name: string, signal: Signal<T>) => {
-  const {
-    initialData,
-    errors,
-    registerField,
-    unRegisterField,
-    getFieldValue,
-    getData,
-    formId,
-    setFieldValues,
-    setFieldError,
-    clearFieldError,
-    clearFieldValue,
-    watchData: watchFormData,
-  } = SFormContext.useContainer();
-
-  const defaultValue = useMemo(() => {
-    return dot.pick(name, initialData);
-  }, [name, initialData]);
-
-  const error = useMemo(() => {
-    return errors[name];
-  }, [errors, name]);
-
-  useEffect(() => {
-    // Apply defaultValue on mount automatically.
-    if (defaultValue) {
-      signal.value = defaultValue;
-    }
-
-    // Automatically register on mount.
-    registerField({
-      name,
-      value: signal,
-    });
-
-    return () => {
-      // Also automatically unregister on unmount.
-      unRegisterField(name);
-    };
-  }, []);
-
-  // Watch field changes.
-  const watchField = useCallback(function <T>(
-    fieldName: string,
-    cb: (value: Signal<T> | null) => T,
-  ) {
-    return useComputed(() => cb(getFieldValue(fieldName)));
-  }, []);
-
-  const setError = useCallback(
-    (error: any) => {
-      setFieldError(name, error);
-    },
-    [setFieldError, name],
-  );
-
-  const clearError = useCallback(() => {
-    clearFieldError(name);
-  }, [clearFieldError, name]);
-
-  const clearField = useCallback(() => {
-    clearFieldValue(name);
-  }, [clearFieldValue, name]);
-
-  return {
-    defaultValue,
-    error,
-    formId,
-    watchFormData,
-    watchField,
-    setFieldValues,
-    setError,
-    clearError,
-    clearField,
-    getData,
-  };
-};
-
-export type SFormHelpers = {
-  formId: string;
-  reset: ReturnType<typeof useSFormContext>["reset"];
+export type SFieldOpts = {
+  defaultValue?: any;
+  clearValue?: any;
 };
 
 export type SFormConsumerProps = {
   children: ReactNode | ComponentType;
   onSubmit?: (data: SFormData, helpers: SFormHelpers) => void;
   initialData?: SFormContextProps["initialData"];
+  strict?: boolean;
 };
 
 const useFormPortal = (id = "sForm-portal") => {
@@ -264,7 +188,7 @@ const useFormPortal = (id = "sForm-portal") => {
 };
 
 const SFormConsumer = (props: SFormConsumerProps) => {
-  const { formId, getData, reset } = SFormContext.useContainer();
+  const { formId, getData, reset, setFormErrors } = SFormContext.useContainer();
   const { children, onSubmit } = props;
   const formPortal = useFormPortal();
 
@@ -278,7 +202,7 @@ const SFormConsumer = (props: SFormConsumerProps) => {
           ? (e) => {
               // Prevent reloading tab.
               e.preventDefault();
-              onSubmit(getData(), { formId, reset });
+              onSubmit(getData(), { formId, reset, setFormErrors });
             }
           : undefined
       }
@@ -299,26 +223,31 @@ const SFormConsumer = (props: SFormConsumerProps) => {
 
 export type SFormProps = SFormConsumerProps;
 
-export const SForm = (props: SFormProps) => {
-  const { onSubmit, initialData } = props;
+export const SForm = memo(
+  (props: SFormProps) => {
+    const { onSubmit, initialData, strict } = props;
 
-  let children = props.children;
-  if (typeof children === "function") {
-    // Accepts renderFn as children.
-    const Component = children;
-    children = <Component />;
-  } else {
-    children = props.children;
-  }
+    let children = props.children;
+    if (typeof children === "function") {
+      // Accepts renderFn as children.
+      const Component = children;
+      children = <Component />;
+    } else {
+      children = props.children;
+    }
 
-  return (
-    <SFormContext.Provider initialState={{ initialData }}>
-      <SFormConsumer onSubmit={onSubmit}>{children}</SFormConsumer>
-    </SFormContext.Provider>
-  );
-};
+    return (
+      <SFormContext.Provider initialState={{ initialData, strict }}>
+        <SFormConsumer onSubmit={onSubmit}>{children}</SFormConsumer>
+      </SFormContext.Provider>
+    );
+  },
+  // Ignore "prop" changes for SForm.
+  // SEE: [memo – React](https://react.dev/reference/react/memo#specifying-a-custom-comparison-function)
+  () => true,
+);
 
-SForm.Submit = (props: HTMLProps<HTMLButtonElement>) => {
+export const SFormSubmit = (props: HTMLProps<HTMLButtonElement>) => {
   const { formId } = SFormContext.useContainer();
   return <button {...props} type="submit" form={formId} />;
 };

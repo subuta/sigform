@@ -1,4 +1,4 @@
-import { useSignal, useSignalEffect } from "@preact/signals-react";
+import { useSignalEffect } from "@preact/signals-react";
 import cx from "classnames";
 import { useSField } from "sigform";
 
@@ -11,8 +11,11 @@ type Props = {
 export const TextInput = (props: Props) => {
   const { label, name } = props;
 
-  const text = useSignal("");
-  const { formId, setError, clearError, error } = useSField(name, text);
+  const [text, field] = useSField<string>(name, {
+    clearValue: "",
+  });
+
+  const { formId, setError, clearError, error } = field;
 
   // Validation example.
   useSignalEffect(() => {
@@ -36,7 +39,7 @@ export const TextInput = (props: Props) => {
         onChange={(e) => {
           text.value = e.target.value;
         }}
-        value={text.value || ""}
+        value={text.value}
       />
 
       {error && <p className="font-bold">{error}</p>}

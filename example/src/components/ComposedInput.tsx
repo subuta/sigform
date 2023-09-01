@@ -1,5 +1,5 @@
 import { TextInput } from "@/components/TextInput";
-import { untracked, useSignal, useSignalEffect } from "@preact/signals-react";
+import { useSignalEffect } from "@preact/signals-react";
 import { SForm, SFormContext, useSField } from "sigform";
 
 type Props = {
@@ -19,14 +19,16 @@ const parse = (composed: string) => {
 };
 
 // Complex composed input example.
-export const ComposedInputNext = (props: Props) => {
+const clearValue = "";
+export const ComposedInput = (props: Props) => {
   const { name } = props;
 
-  const composed = useSignal("");
-  const { defaultValue } = useSField(name, composed);
+  const [composed] = useSField<string>(name, {
+    clearValue,
+  });
 
   return (
-    <SForm initialData={parse(defaultValue || "")}>
+    <SForm initialData={parse(composed.value)}>
       {() => {
         // With "renderless component" (`<SForm>{() => {}]</SForm>`) syntax, you can access nested fields in here.
         const { watchData, reset } = SFormContext.useContainer();
@@ -43,7 +45,7 @@ export const ComposedInputNext = (props: Props) => {
 
         useSignalEffect(() => {
           // Broadcast "reset" changes to nested forms.
-          if (!composed.value) {
+          if (composed.value === clearValue) {
             reset();
           }
         });

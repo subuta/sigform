@@ -2,7 +2,7 @@
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
     "paths": {
-      "sigform": ["../packages/sigform/src/SForm.tsx"],
+      "sigform": ["../packages/sigform/src/index.ts"],
       "@/*": ["./src/*"]
     },
     "allowJs": true,

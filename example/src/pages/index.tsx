@@ -1,5 +1,8 @@
-import { ComposedInputNext } from "@/components/ComposedInputNext";
-import { SForm } from "sigform";
+import { ArrayInput } from "@/components/ArrayInput";
+import { ComposedInput } from "@/components/ComposedInput";
+import { TextInput } from "@/components/TextInput";
+import { v4 as uuid } from "@lukeed/uuid";
+import { SForm, SFormSubmit } from "sigform";
 
 export default function Index() {
   return (
@@ -12,11 +15,31 @@ export default function Index() {
         }}
         initialData={{
           composed: "123-456-789",
+          array: [{ key: uuid(), text: "hoge" }],
+          text: "hello world",
         }}
       >
-        <ComposedInputNext name="composed" />
+        {() => {
+          return (
+            <>
+              <ComposedInput name="composed" />
 
-        <SForm.Submit className="mt-4 p-1 border rounded">submit</SForm.Submit>
+              <hr className="my-4" />
+
+              <ArrayInput name="array" />
+
+              <hr className="my-4" />
+
+              <TextInput label="test" name="text" />
+
+              <hr className="my-4" />
+
+              <SFormSubmit className="mt-4 p-1 border rounded bg-blue-400">
+                submit
+              </SFormSubmit>
+            </>
+          );
+        }}
       </SForm>
     </div>
   );
