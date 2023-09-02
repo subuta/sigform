@@ -55,7 +55,7 @@ describe("deepSignal", () => {
       const spy = jest.fn();
 
       effect(() => {
-        spy(data.toJSON());
+        spy(data.dump());
       });
 
       // Update deeply nested value
@@ -72,29 +72,28 @@ describe("deepSignal", () => {
       const spy = jest.fn();
 
       effect(() => {
-        spy(data.toJSON());
+        spy(data.dump());
       });
 
       expect(spy.mock.calls[0][0]).toEqual([{ hoge: "fuga" }]);
 
       // Push item to array
-      data.value = [...data.value, deepSignal({ fuga: "piyo" })];
+      data.value = [...data.value, deepSignal({ hoge: "piyo" })];
       expect(spy.mock.calls[1][0]).toEqual([
         { hoge: "fuga" },
-        { fuga: "piyo" },
+        { hoge: "piyo" },
       ]);
 
       // Update newly added array value
-      setDeepSignal(data, "1.fuga", "hoge");
+      setDeepSignal(data, "1.hoge", "hoge");
       expect(spy.mock.calls[2][0]).toEqual([
         { hoge: "fuga" },
-        { fuga: "hoge" },
+        { hoge: "hoge" },
       ]);
 
       // Remove item from array
-      data.value = data.value.filter((v: Signal<any>) => {
-        const data = v.toJSON();
-        return data.hoge;
+      data.value = data.dump().filter((data) => {
+        return data.hoge === "fuga";
       });
       expect(spy.mock.calls[3][0]).toEqual([{ hoge: "fuga" }]);
 

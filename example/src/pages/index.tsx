@@ -1,4 +1,4 @@
-import { ArrayInput } from "@/components/ArrayInput";
+import { ArrayInput, getNewRow } from "@/components/ArrayInput";
 import { ComposedInput } from "@/components/ComposedInput";
 import { TextInput } from "@/components/TextInput";
 import { v4 as uuid } from "@lukeed/uuid";
@@ -15,7 +15,7 @@ export default function Index() {
         }}
         initialData={{
           composed: "123-456-789",
-          array: [{ key: uuid(), text: "hoge" }],
+          array: [getNewRow("")],
           text: "hello world",
         }}
       >

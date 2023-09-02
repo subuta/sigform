@@ -68,7 +68,7 @@ export const useSFormContext = (ctx?: SFormContextProps) => {
 
   const getData = useCallback(() => {
     // Return serialized deepSignal data.
-    return data.toJSON();
+    return data.dump();
   }, []);
 
   const getField = useCallback((fieldName: string) => {

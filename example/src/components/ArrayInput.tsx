@@ -1,41 +1,28 @@
 import { TextInput } from "@/components/TextInput";
 import { v4 as uuid } from "@lukeed/uuid";
-import { Signal } from "@preact/signals-react";
 import React, { useCallback } from "react";
-import { DeepSignal, deepSignal, useSField } from "sigform";
+import { useSArrayField } from "sigform";
 
 export type Row = {
   key: string;
   text: string;
 };
 
-const getNewRow = (text: string) => ({ key: uuid(), text });
+export const getNewRow = (text: string) => ({ key: uuid(), text });
 
 export const ArrayInput = (props: { name: string }) => {
   const { name } = props;
 
-  const [array] = useSField<DeepSignal<Row>[]>(name, {
+  const [array] = useSArrayField<Row>(name, {
     clearValue: [],
   });
-
-  const remove = useCallback((key: string) => {
-    array.value = array.value.filter((signal) => {
-      const row = signal.toJSON();
-      return row.key !== key;
-    });
-  }, []);
-
-  const add = useCallback(() => {
-    array.value = [...array.value, deepSignal(getNewRow(""))];
-  }, []);
 
   return (
     <div>
       <div className="flex flex-col">
-        {array.value.map(
-          useCallback((signal, i) => {
-            const row = signal.toJSON();
-            const { key, text } = row;
+        {array.dump().map(
+          useCallback((row, i) => {
+            const { key } = row;
 
             return (
               <div key={key}>
@@ -45,7 +32,7 @@ export const ArrayInput = (props: { name: string }) => {
 
                 <button
                   className="ml-1 p-1 rounded text-lg"
-                  onClick={() => remove(key)}
+                  onClick={() => array.splice(i, 1)}
                 >
                   -
                 </button>
@@ -55,7 +42,10 @@ export const ArrayInput = (props: { name: string }) => {
         )}
       </div>
 
-      <button className="ml-1 p-1 rounded text-lg" onClick={() => add()}>
+      <button
+        className="ml-1 p-1 rounded text-lg"
+        onClick={() => array.push(getNewRow(""))}
+      >
         +
       </button>
     </div>

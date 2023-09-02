@@ -1,3 +1,4 @@
+import * as iarray from "@immutable-array/prototype";
 import { Signal, signal } from "@preact/signals-react";
 import { useMemo } from "react";
 import invariant from "tiny-invariant";
@@ -23,7 +24,7 @@ export const setDeepSignal = (obj: Signal<any>, path: string, value: any) => {
 export const getDeepSignal = (
   obj: Signal<any>,
   path: string,
-): Signal<any> | undefined => {
+): DeepSignal<any> | undefined => {
   // If path is not defined or it has false value
   if (!path) return undefined;
   // Check if path is string or array. Regex : ensure that we do not have '.' and brackets.
@@ -60,19 +61,95 @@ export const deepSignalToJSON = (data: Signal<any>): any => {
 };
 
 export type DeepSignal<T> = Signal<T> & {
-  toJSON: () => T;
+  dump: () => T;
 };
 
-const asDeepSignal = <T>(data: any): DeepSignal<T> => {
+// Uses '@immutable-array/prototype' for array operation.
+// SEE: [azu/immutable-array-prototype: A collection of Immutable Array prototype methods(Per method packages).](https://github.com/azu/immutable-array-prototype)
+export type DeepArraySignal<T> = Signal<T> & {
+  dump: () => T[];
+  // Removes the last element from an array and returns it.
+  pop(): T[];
+  // Appends new elements to an array, and returns the new length of the array.
+  push(...items: T[]): Array<T>;
+  // Removes the first element from an array and returns it.
+  shift(): Array<T>;
+  // Inserts new elements at the start of an array.
+  unshift(...items: T[]): T[];
+  //  Removes elements from an array and, if necessary, inserts new elements in their place, returning the deleted elements.
+  splice(start?: number, deleteCount?: number, ...items: T[]): Array<T>;
+  splice(...args: any[]): Array<T>;
+  // Reverses the elements in an Array.
+  reverse(): Array<T>;
+  // Sorts an array.
+  sort(compareFn?: (a: T, b: T) => number): Array<T>;
+  // Returns this object after filling the section identified by start and end with value
+  fill(value: T, start?: number, end?: number): Array<T>;
+  // Returns this object after copying a section of the array identified by start and end to the same array starting at position target
+  copyWithin<T>(target: number, start: number, end?: number): Array<T>;
+};
+
+const asDeepSignal = <T>(data: T): DeepSignal<T> => {
   const s = signal(data) as DeepSignal<any>;
-  s.toJSON = () => deepSignalToJSON(s);
+  s.dump = () => deepSignalToJSON(s);
+  return s;
+};
+
+const asArraySignal = <T>(data: T[]): DeepArraySignal<T> => {
+  const s = signal(data) as DeepArraySignal<any>;
+  s.dump = () => deepSignalToJSON(s);
+  s.pop = () => {
+    s.value = iarray.pop(s.value);
+    return s.value;
+  };
+  s.push = (...items) => {
+    s.value = iarray.push(s.value, ...items.map(deepSignal));
+    return s.value;
+  };
+  s.shift = () => {
+    s.value = iarray.shift(s.value);
+    return s.value;
+  };
+  s.unshift = (...items) => {
+    s.value = iarray.unshift(s.value, ...items.map(deepSignal));
+    return s.value;
+  };
+  s.splice = (start, deleteCount, ...items) => {
+    s.value = iarray.splice(
+      s.value,
+      start,
+      deleteCount,
+      ...items.map(deepSignal),
+    );
+    return s.value;
+  };
+  s.sort = (compareFn) => {
+    s.value = iarray.sort(s.value, compareFn);
+    return s.value;
+  };
+  s.reverse = () => {
+    s.value = iarray.reverse(s.value);
+    return s.value;
+  };
+  s.fill = (value, start, end) => {
+    s.value = iarray.fill(s.value, deepSignal(value), start, end);
+    return s.value;
+  };
+  s.copyWithin = (target, start, end) => {
+    s.value = iarray.copyWithin(s.value, target, start, end);
+    return s.value;
+  };
   return s;
 };
 
 // Create signal recursively.
-export const deepSignal = (data: any): DeepSignal<any> => {
+export function deepSignal(data: any[]): DeepArraySignal<any>;
+export function deepSignal(data: any): DeepSignal<any>;
+export function deepSignal(
+  data: any | any[],
+): DeepSignal<any> | DeepArraySignal<any> {
   if (Array.isArray(data)) {
-    return asDeepSignal(data.map((v) => deepSignal(v)));
+    return asArraySignal(data.map((v) => deepSignal(v)));
   } else if (isObject(data)) {
     const obj = data as Record<string, any>;
     return asDeepSignal(
@@ -89,9 +166,9 @@ export const deepSignal = (data: any): DeepSignal<any> => {
     return data;
   }
   return asDeepSignal(data);
-};
+}
 
 // deep version of "useSignal"
-export const useDeepSignal = <T>(data: Record<string, any>): Signal<T> => {
+export const useDeepSignal = <T>(data: Record<string, any>): DeepSignal<T> => {
   return useMemo(() => deepSignal(data), []);
 };

@@ -1,6 +1,10 @@
 import { SFieldOpts, SFormContext, useSFormContext } from "./SForm";
-import { DeepSignal, getDeepSignal } from "./deepSignal";
-import { signal as createSignal } from "@preact/signals-core";
+import {
+  DeepArraySignal,
+  DeepSignal,
+  deepSignal,
+  getDeepSignal,
+} from "./deepSignal";
 import { Signal, useComputed } from "@preact/signals-react";
 import { useCallback, useEffect, useMemo } from "react";
 import invariant from "tiny-invariant";
@@ -32,9 +36,9 @@ const useRawSField = <T>(name: string, opts?: SFieldOpts) => {
     if (signal !== undefined) {
       return signal;
     } else if (opts?.defaultValue !== undefined) {
-      return createSignal(opts?.defaultValue);
+      return deepSignal(opts?.defaultValue);
     }
-    return createSignal(null);
+    return deepSignal(null);
   }, []);
 
   const error = useMemo(() => {
@@ -100,6 +104,18 @@ export const useSField = <T>(
 ): [DeepSignal<T>, SFieldHelpers<T>] => {
   const { signal, ...rest } = useRawSField<T>(name, opts);
   return [signal, rest];
+};
+
+export const useSArrayField = <T>(
+  name: string,
+  opts?: SFieldOpts,
+): [DeepArraySignal<T>, SFieldHelpers<T>] => {
+  const { signal, ...rest } = useRawSField<T>(name, opts);
+
+  // @ts-ignore
+  const array = signal as DeepArraySignal<T>;
+
+  return [array, rest];
 };
 
 export type SFormHelpers = {
