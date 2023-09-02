@@ -1,5 +1,5 @@
 import { useDeepSignal } from "./deepSignal";
-import { SFormHelpers } from "@/useSField";
+import { SFormHelpers } from "./useSField";
 import {
   ReadonlySignal,
   Signal,

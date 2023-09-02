@@ -40,6 +40,7 @@ export const getDeepSignal = (
   invariant(pathArray, "must exists");
 
   // Find value or return undefined
+  // @ts-ignore
   return pathArray.reduce((prevObj, key, i) => {
     if (i === pathArray.length - 1) return prevObj[key];
     if (prevObj && prevObj[key]) {
