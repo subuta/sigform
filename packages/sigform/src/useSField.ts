@@ -1,6 +1,7 @@
 import { SFieldOpts, SFormContext, useSFormContext } from "./SForm";
 import {
   DeepArraySignal,
+  DeepObjectSignal,
   DeepSignal,
   deepSignal,
   getDeepSignal,
@@ -116,6 +117,18 @@ export const useSArrayField = <T>(
   const array = signal as DeepArraySignal<T>;
 
   return [array, rest];
+};
+
+export const useSObjectField = <T>(
+  name: string,
+  opts?: SFieldOpts,
+): [DeepObjectSignal<T>, SFieldHelpers<T>] => {
+  const { signal, ...rest } = useRawSField<T>(name, opts);
+
+  // @ts-ignore
+  const object = signal as DeepObjectSignal<T>;
+
+  return [object, rest];
 };
 
 export type SFormHelpers = {

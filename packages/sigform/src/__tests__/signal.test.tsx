@@ -1,4 +1,4 @@
-import { deepSignal, isSignal, setDeepSignal } from "@/.";
+import { DeepObjectSignal, deepSignal, isSignal, setDeepSignal } from "@/.";
 import { Signal, effect, signal } from "@preact/signals-react";
 import "@testing-library/jest-dom";
 import React from "react";
@@ -64,6 +64,36 @@ describe("deepSignal", () => {
       expect(spy).toHaveBeenCalledTimes(2);
       expect(spy.mock.calls[0][0]).toEqual([{ hoge: "fuga" }]);
       expect(spy.mock.calls[1][0]).toEqual([{ hoge: "piyo" }]);
+    });
+
+    it("should detect update of object value", () => {
+      const data = deepSignal({ hoge: "fuga" });
+
+      const spy = jest.fn();
+
+      effect(() => {
+        spy(data.dump());
+      });
+      expect(spy.mock.calls[0][0]).toEqual({ hoge: "fuga" });
+
+      // Update object value
+      data.assign({ hoge: "piyo" });
+      expect(spy.mock.calls[1][0]).toEqual({ hoge: "piyo" });
+
+      // Add new key
+      data.set("fuga", "hoge");
+      expect(spy.mock.calls[2][0]).toEqual({ fuga: "hoge", hoge: "piyo" });
+
+      expect(setDeepSignal(data, "fuga", "piyo")).toEqual(true);
+      expect(spy.mock.calls[3][0]).toEqual({ fuga: "piyo", hoge: "piyo" });
+
+      data.delete("fuga");
+      expect(spy.mock.calls[4][0]).toEqual({ hoge: "piyo" });
+
+      data.remove((v) => v === "piyo");
+      expect(spy.mock.calls[5][0]).toEqual({});
+
+      expect(spy).toHaveBeenCalledTimes(6);
     });
 
     it("should detect update of array operation", () => {

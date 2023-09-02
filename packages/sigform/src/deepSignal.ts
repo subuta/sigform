@@ -1,5 +1,5 @@
 import * as iarray from "@immutable-array/prototype";
-import { Signal, signal } from "@preact/signals-react";
+import { Signal, batch, signal } from "@preact/signals-react";
 import { useMemo } from "react";
 import invariant from "tiny-invariant";
 
@@ -8,6 +8,13 @@ const isObject = (a: any) => a instanceof Object;
 
 // SEE: [dy/signal-struct: Combined signal storage](https://github.com/dy/signal-struct/blob/main/signal-struct.js#L6)
 export const isSignal = (v: any) => v && !!v.peek;
+
+// SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#omit)
+const omit = (obj: any, props: string[]) => {
+  obj = { ...obj };
+  props.forEach((prop) => delete obj[prop]);
+  return obj;
+};
 
 export const setDeepSignal = (obj: Signal<any>, path: string, value: any) => {
   // Get deeply nested signal
@@ -64,6 +71,14 @@ export type DeepSignal<T> = Signal<T> & {
   dump: () => T;
 };
 
+export type DeepObjectSignal<T> = Signal<T> & {
+  dump: () => T;
+  set: (key: string, value: any) => void;
+  assign: (obj: Record<string, any>) => void;
+  delete: (...keys: string[]) => void;
+  remove: (predicate: (value: any, key: string) => boolean) => void;
+};
+
 // Uses '@immutable-array/prototype' for array operation.
 // SEE: [azu/immutable-array-prototype: A collection of Immutable Array prototype methods(Per method packages).](https://github.com/azu/immutable-array-prototype)
 export type DeepArraySignal<T> = Signal<T> & {
@@ -95,7 +110,36 @@ const asDeepSignal = <T>(data: T): DeepSignal<T> => {
   return s;
 };
 
-const asArraySignal = <T>(data: T[]): DeepArraySignal<T> => {
+const asDeepObjectSignal = <T>(data: T): DeepObjectSignal<T> => {
+  const s = signal(data) as DeepObjectSignal<any>;
+  const set = (key: string, value: any) => {
+    s.value = { ...s.value, [key]: deepSignal(value) };
+  };
+  s.dump = () => deepSignalToJSON(s);
+  s.set = set;
+  s.delete = (...keys) => {
+    s.value = omit(s.value, keys);
+  };
+  s.assign = (obj) => {
+    // Update in batch.
+    batch(() => {
+      Object.keys(obj).forEach((key) => {
+        set(key, obj[key]);
+      });
+    });
+  };
+  s.remove = (predicate) => {
+    const obj = s.dump();
+    const keys = Object.keys(obj).filter((key) => {
+      const value = obj[key];
+      return predicate(value, key);
+    });
+    s.value = omit(s.value, keys);
+  };
+  return s;
+};
+
+const asDeepArraySignal = <T>(data: T[]): DeepArraySignal<T> => {
   const s = signal(data) as DeepArraySignal<any>;
   s.dump = () => deepSignalToJSON(s);
   s.pop = () => {
@@ -144,15 +188,16 @@ const asArraySignal = <T>(data: T[]): DeepArraySignal<T> => {
 
 // Create signal recursively.
 export function deepSignal(data: any[]): DeepArraySignal<any>;
+export function deepSignal(data: Record<any, any>): DeepObjectSignal<any>;
 export function deepSignal(data: any): DeepSignal<any>;
 export function deepSignal(
-  data: any | any[],
-): DeepSignal<any> | DeepArraySignal<any> {
+  data: any | Record<any, any> | any[],
+): DeepSignal<any> | DeepObjectSignal<any> | DeepArraySignal<any> {
   if (Array.isArray(data)) {
-    return asArraySignal(data.map((v) => deepSignal(v)));
+    return asDeepArraySignal(data.map((v) => deepSignal(v)));
   } else if (isObject(data)) {
     const obj = data as Record<string, any>;
-    return asDeepSignal(
+    return asDeepObjectSignal(
       Object.keys(obj).reduce(
         (acc, k) => {
           acc[k] = deepSignal(obj[k]);
