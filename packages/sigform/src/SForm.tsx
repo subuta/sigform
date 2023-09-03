@@ -83,8 +83,8 @@ export const useSFormContext = (ctx?: SFormContextProps) => {
 
   // Watch form data changes.
   const watchData = useCallback(
-    function <T>(cb: (data: SFormData) => T): ReadonlySignal<T> {
-      return useComputed(() => cb(getData()));
+    function <T>(cb?: (data: SFormData) => T): ReadonlySignal<T> {
+      return useComputed(() => (cb ? cb(getData()) : (getData() as T)));
     },
     [getData],
   );
@@ -242,9 +242,11 @@ export const SForm = memo(
       </SFormContext.Provider>
     );
   },
-  // Ignore "prop" changes for SForm.
+  // Only respond to "children" update.
   // SEE: [memo – React](https://react.dev/reference/react/memo#specifying-a-custom-comparison-function)
-  () => true,
+  (oldProps, newProps) => {
+    return oldProps.children === newProps.children;
+  },
 );
 
 export const SFormSubmit = (props: HTMLProps<HTMLButtonElement>) => {

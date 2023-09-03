@@ -114,7 +114,12 @@ const asDeepSignal = <T>(data: T): DeepSignal<T> => {
 const asDeepObjectSignal = <T>(data: T): DeepObjectSignal<T> => {
   const s = signal(data) as DeepObjectSignal<any>;
   const set = (key: string, value: any) => {
-    s.value = { ...s.value, [key]: deepSignal(value) };
+    batch(() => {
+      // Add key to parent at first.
+      s.value = { [key]: deepSignal(value), ...s.value };
+      // Then update nested value.
+      s.value[key].value = value;
+    });
   };
   s.dump = () => deepSignalToJSON(s);
   s.set = set;
