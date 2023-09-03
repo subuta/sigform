@@ -1,6 +1,7 @@
 import { TextInput } from "@/components/TextInput";
 import { useSignalEffect } from "@preact/signals-react";
-import { SForm, SFormContext, useSField } from "sigform";
+import { useEffect } from "react";
+import { useSField, useSFormContext, wrapSForm } from "sigform";
 
 type Props = {
   name: string;
@@ -20,47 +21,51 @@ const parse = (composed: string) => {
 
 // Complex composed input example.
 const clearValue = "";
-export const ComposedInput = (props: Props) => {
-  const { name } = props;
+export const ComposedInput = wrapSForm<Props>(
+  (props) => {
+    const { name } = props;
 
-  const [composed] = useSField<string>(name, {
-    clearValue,
-  });
+    const { watchData, reset, setFieldValues } = useSFormContext();
 
-  return (
-    <SForm initialData={parse(composed.value)}>
-      {() => {
-        // With "renderless component" (`<SForm>{() => {}]</SForm>`) syntax, you can access nested fields in here.
-        const { watchData, reset } = SFormContext.useContainer();
+    const [composed] = useSField<string>(name, {
+      formCtx: props.outerCtx,
+      clearValue,
+    });
 
-        // Join 3 input results.
-        const joined = watchData((data): string => {
-          return [data.first, data.second, data.third].join("-");
-        });
+    // Join 3 input results.
+    const joined = watchData((data): string => {
+      return [data.first, data.second, data.third].join("-");
+    });
 
-        useSignalEffect(() => {
-          // Broadcast joined value into parent.
-          composed.value = joined.value;
-        });
+    useEffect(() => {
+      // Set initial value on mount.
+      if (composed.value) {
+        setFieldValues(parse(composed.value));
+      }
+    }, []);
 
-        useSignalEffect(() => {
-          // Broadcast "reset" changes to nested forms.
-          if (composed.value === clearValue) {
-            reset();
-          }
-        });
+    useSignalEffect(() => {
+      // Broadcast joined value into parent.
+      composed.value = joined.value;
+    });
 
-        return (
-          <div className="flex flex-col items-start">
-            {/* You can nest other input(field) as below */}
-            <TextInput label="first" name="first" />
-            <TextInput label="second" name="second" />
-            <TextInput label="third" name="third" />
+    useSignalEffect(() => {
+      // Broadcast "reset" changes to nested forms.
+      if (composed.value === clearValue) {
+        reset();
+      }
+    });
 
-            <p>joined: {joined}</p>
-          </div>
-        );
-      }}
-    </SForm>
-  );
-};
+    return (
+      <div className="flex flex-col items-start">
+        {/* You can nest other input(field) as below */}
+        <TextInput label="first" name="first" />
+        <TextInput label="second" name="second" />
+        <TextInput label="third" name="third" />
+
+        <p>joined: {joined}</p>
+      </div>
+    );
+  },
+  { initialData: { first: "", second: "", third: "" } },
+);

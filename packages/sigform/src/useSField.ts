@@ -1,4 +1,9 @@
-import { SFieldOpts, SFormContext, useSFormContext } from "./SForm";
+import {
+  SFieldOpts,
+  SFormContext,
+  SFormContextType,
+  useSFormContext,
+} from "./SForm";
 import {
   DeepArraySignal,
   DeepObjectSignal,
@@ -11,7 +16,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import invariant from "tiny-invariant";
 
 const useRawSField = <T>(name: string, opts?: SFieldOpts) => {
-  const ctx = SFormContext.useContainer();
+  const ctx = useSFormContext();
 
   const {
     data,
@@ -27,13 +32,12 @@ const useRawSField = <T>(name: string, opts?: SFieldOpts) => {
     clearFieldError,
     clearFieldValue,
     watchData: watchFormData,
-  } = ctx;
-  if (strict) {
-    invariant(data.value[name], `${name} not found in initialData`);
-  }
-
+  } = opts?.formCtx || ctx;
   const signal: DeepSignal<T> = useMemo(() => {
     const signal = getDeepSignal(data, name);
+    if (strict && !signal) {
+      invariant(false, `${name} not found in initialData`);
+    }
     if (signal !== undefined) {
       return signal;
     } else if (opts?.defaultValue !== undefined) {

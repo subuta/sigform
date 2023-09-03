@@ -11,7 +11,6 @@ import React, {
   ComponentType,
   HTMLProps,
   ReactNode,
-  memo,
   useCallback,
   useEffect,
   useState,
@@ -36,7 +35,7 @@ export type SFormContextProps = {
   strict?: boolean;
 };
 
-export const useSFormContext = (ctx?: SFormContextProps) => {
+const useRawSFormContext = (ctx?: SFormContextProps) => {
   const data = useDeepSignal<Record<string, Signal<any>>>(
     ctx?.initialData || {},
   );
@@ -133,7 +132,11 @@ export const useSFormContext = (ctx?: SFormContextProps) => {
   }, []);
 
   const setFieldValues = useCallback((data: SFormData = {}) => {
-    data.forEach((value: any, name: string) => setFieldValue(name, value));
+    const fieldNames = Object.keys(data);
+    fieldNames.forEach((name) => {
+      const value = data[name];
+      setFieldValue(name, value);
+    });
   }, []);
 
   return {
@@ -157,15 +160,20 @@ export const useSFormContext = (ctx?: SFormContextProps) => {
   };
 };
 
-export const SFormContext = createContainer(useSFormContext);
+export const SFormContext = createContainer(useRawSFormContext);
+
+export const useSFormContext = SFormContext.useContainer;
+
+export type SFormContextType = ReturnType<typeof useSFormContext>;
 
 export type SFieldOpts = {
   defaultValue?: any;
   clearValue?: any;
+  formCtx?: SFormContextType;
 };
 
 export type SFormConsumerProps = {
-  children: ReactNode | ComponentType;
+  children: ReactNode;
   onSubmit?: (data: SFormData, helpers: SFormHelpers) => void;
   initialData?: SFormContextProps["initialData"];
   strict?: boolean;
@@ -188,7 +196,7 @@ const useFormPortal = (id = "sForm-portal") => {
 };
 
 const SFormConsumer = (props: SFormConsumerProps) => {
-  const { formId, getData, reset, setFormErrors } = SFormContext.useContainer();
+  const { formId, getData, reset, setFormErrors } = useSFormContext();
   const { children, onSubmit } = props;
   const formPortal = useFormPortal();
 
@@ -223,33 +231,31 @@ const SFormConsumer = (props: SFormConsumerProps) => {
 
 export type SFormProps = SFormConsumerProps;
 
-export const SForm = memo(
-  (props: SFormProps) => {
-    const { onSubmit, initialData, strict } = props;
+export const SForm = (props: SFormProps) => {
+  const { onSubmit, initialData, strict, children } = props;
 
-    let children = props.children;
-    if (typeof children === "function") {
-      // Accepts renderFn as children.
-      const Component = children;
-      children = <Component />;
-    } else {
-      children = props.children;
-    }
-
-    return (
-      <SFormContext.Provider initialState={{ initialData, strict }}>
-        <SFormConsumer onSubmit={onSubmit}>{children}</SFormConsumer>
-      </SFormContext.Provider>
-    );
-  },
-  // Only respond to "children" update.
-  // SEE: [memo – React](https://react.dev/reference/react/memo#specifying-a-custom-comparison-function)
-  (oldProps, newProps) => {
-    return oldProps.children === newProps.children;
-  },
-);
+  return (
+    <SFormContext.Provider initialState={{ initialData, strict }}>
+      <SFormConsumer onSubmit={onSubmit}>{children}</SFormConsumer>
+    </SFormContext.Provider>
+  );
+};
 
 export const SFormSubmit = (props: HTMLProps<HTMLButtonElement>) => {
-  const { formId } = SFormContext.useContainer();
+  const { formId } = useSFormContext();
   return <button {...props} type="submit" form={formId} />;
+};
+
+export const wrapSForm = <P,>(
+  Component: ComponentType<P & { outerCtx: SFormContextType }>,
+  formProps: SFormContextProps,
+) => {
+  return (props: P) => {
+    const ctx = useSFormContext();
+    return (
+      <SForm {...formProps}>
+        <Component {...props} outerCtx={ctx} />
+      </SForm>
+    );
+  };
 };
