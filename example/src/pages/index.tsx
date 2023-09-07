@@ -1,39 +1,59 @@
-import { ArrayInput, getNewRow } from "@/components/ArrayInput";
-import { ComposedInput } from "@/components/ComposedInput";
-import { TextInput } from "@/components/TextInput";
-import { SForm, SFormSubmit } from "sigform";
+import { TodoApp } from "@/components/TodoApp";
+import cx from "classnames";
+import React, { useId, useMemo } from "react";
+import { SigForm } from "sigform";
+
+const buttonClass = "px-2 py-1 rounded border";
 
 export default function Index() {
+  // For preventing hydration(SSR) issue.
+  const initialTaskId = useId();
+  const initialTodos = useMemo(() => {
+    return [{ id: initialTaskId, task: "buy egg" }];
+  }, []);
+
   return (
-    <div className="p-4">
-      <SForm
-        onSubmit={(data, { reset }) => {
-          console.log("submit!", data);
-          // Reset form after submit.
-          reset();
+    <div>
+      <SigForm
+        onChange={(value, helpers) => {
+          console.log("changed!", JSON.stringify(value, null, 2));
+
+          // Check first input value.
+          const specialCommand =
+            value.todos && value.todos[0] && value.todos[0].task;
+
+          // Form level validation example.
+          if (specialCommand === "invalid") {
+            helpers.setFormErrors({
+              todos: [{ task: "some error" }],
+            });
+            return;
+          }
+
+          if (specialCommand === "clear") {
+            // Clear values.
+            helpers.setFormValues({ todos: [] });
+            return;
+          }
+
+          helpers.clearFormErrors();
         }}
-        initialData={{
-          composed: "123-456-789",
-          array: [getNewRow("")],
-          text: "hello world",
+        onSubmit={(value, helpers) => {
+          console.log("save!", JSON.stringify(value, null, 2));
         }}
       >
-        <ComposedInput name="composed" />
+        <TodoApp name="todos" defaultValue={initialTodos} />
 
-        <hr className="my-4" />
-
-        <ArrayInput name="array" />
-
-        <hr className="my-4" />
-
-        <TextInput label="test" name="text" />
-
-        <hr className="my-4" />
-
-        <SFormSubmit className="mt-4 p-1 border rounded bg-blue-400">
-          submit
-        </SFormSubmit>
-      </SForm>
+        <button
+          className={cx(
+            buttonClass,
+            "mt-4 px-3 py-2 bg-blue-500 text-white font-bold",
+          )}
+          type="submit"
+        >
+          Save
+        </button>
+      </SigForm>
     </div>
   );
 }

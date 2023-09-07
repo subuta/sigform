@@ -1,32 +1,19 @@
-import { useSField } from "../src";
+import { sigfield } from "../src";
 import React from "react";
 
-type Props = {
-  name: string;
-  defaultValue?: string;
-  clearValue?: string;
-};
+export const TextInput = sigfield<{}, string>((props) => {
+  const { name, field, dataRef } = props;
 
-export const TextInput = (props: Props) => {
-  const { name, defaultValue, clearValue } = props;
-
-  const [text, { error }] = useSField<string>(name, {
-    defaultValue,
-    clearValue,
-  });
+  // console.log(name, field.value);
 
   return (
-    <>
-      {error && <span data-testid="error">{error}</span>}
-
+    <div className="p-4 bg-red-400" ref={dataRef}>
       <input
-        type="text"
         name={name}
-        onChange={(e) => {
-          text.value = e.target.value;
-        }}
-        value={text.value}
+        type="text"
+        onChange={(e) => (field.value = e.target.value)}
+        value={field.value}
       />
-    </>
+    </div>
   );
-};
+});

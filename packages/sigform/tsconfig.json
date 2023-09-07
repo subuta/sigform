@@ -2,9 +2,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "paths": {
-      "@/*": ["src/*"]
-    },
+    "target": "es6",
+    "paths": {},
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -12,7 +11,7 @@
     "declaration": true,
     "incremental": true,
     "esModuleInterop": true,
-    "module": "ES2020",
+    "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
