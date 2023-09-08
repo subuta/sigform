@@ -94,12 +94,11 @@ export const useSigform = () => {
         const temp = [...parent.value];
         set(temp, key, signal.value);
         parent.value = temp;
-        return true;
       } else if (isObject(parent.value)) {
         parent.value = { ...parent.value, [key]: signal.value };
-        return true;
+      } else {
+        parent.value = signal.value;
       }
-      return false;
     },
     [],
   );
@@ -123,10 +122,7 @@ export const useSigform = () => {
       const parentName = names.join(".");
       const parentField = getField(parentName);
       if (parentField) {
-        invariant(
-          updateDeepSignal(parentField.value, fieldName, field.value),
-          "must be succeeded",
-        );
+        updateDeepSignal(parentField.value, fieldName, field.value);
       }
     },
     [],

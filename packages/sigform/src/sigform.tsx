@@ -4,7 +4,12 @@ import {
   useSigformContext,
 } from "./context";
 import { signal } from "@preact/signals-core";
-import { Signal, untracked, useSignalEffect } from "@preact/signals-react";
+import {
+  Signal,
+  untracked,
+  useComputed,
+  useSignalEffect,
+} from "@preact/signals-react";
 import React, {
   ComponentType,
   FormEvent,
@@ -89,6 +94,13 @@ export const SigForm = sigform(
       untracked(() => {
         onChange && onChange(form.peek(), helpers);
       });
+    });
+
+    // Apply outer signal modification into form values.
+    useSignalEffect(() => {
+      if (props.signal) {
+        ctx.setFormValues(props.signal.value);
+      }
     });
 
     const handleRef = useCallback((r: any) => {
