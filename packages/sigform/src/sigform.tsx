@@ -3,12 +3,16 @@ import {
   SigformContext,
   useSigformContext,
 } from "./context";
-import { untracked, useSignal, useSignalEffect } from "@preact/signals-react";
+import { signal } from "@preact/signals-core";
+import { Signal, untracked, useSignalEffect } from "@preact/signals-react";
 import React, {
   ComponentType,
   FormEvent,
   ReactNode,
+  forwardRef,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
 } from "react";
 import invariant from "tiny-invariant";
@@ -18,13 +22,13 @@ type ChildrenProps = {
 };
 
 const sigform = <P,>(Component: ComponentType<P>) => {
-  return (props: P & SigFormComponentProps<{}>) => {
+  return forwardRef((props: SigFormComponentProps<P>, ref) => {
     return (
       <SigformContext.Provider>
-        <Component {...(props as any)} />
+        <Component {...(props as any)} ref={ref} />
       </SigformContext.Provider>
     );
-  };
+  });
 };
 
 export type SigFormHelpers = Pick<
@@ -35,16 +39,23 @@ export type SigFormHelpers = Pick<
 export type SigFormComponentProps<P> = P & {
   onChange?: (value: any, helpers: SigFormHelpers) => void;
   onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
+  signal?: Signal<any>;
+  className?: string;
 };
 
 export const SigForm = sigform(
-  (props: SigFormComponentProps<ChildrenProps>) => {
-    const { onSubmit, onChange, children } = props;
+  forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
+    const { onSubmit, onChange, children, className = "" } = props;
     const ctx = useSigformContext();
 
+    // Use provided signal or create own.
+    const form = useMemo(
+      () => props.signal ?? signal<Record<string, any> | undefined>(undefined),
+      [],
+    );
+
     const name = ctx.formId;
-    const form = useSignal<Record<string, any> | undefined>(undefined);
-    const ref = useRef<HTMLFormElement | null>(null);
+    const ref = useRef<any>(null);
 
     useEffect(() => {
       // Set name(formId) to data attribute.
@@ -76,23 +87,42 @@ export const SigForm = sigform(
       if (form.value === undefined) return;
       // Subscribe change
       untracked(() => {
-        onChange && onChange(form.value, helpers);
+        onChange && onChange(form.peek(), helpers);
       });
     });
 
+    const handleRef = useCallback((r: any) => {
+      if (typeof outerRef === "function") {
+        outerRef(r);
+      } else if (outerRef) {
+        outerRef.current = r;
+      }
+      ref.current = r;
+    }, []);
+
+    // Use form only if "onSubmit" specified.
+    if (onSubmit) {
+      return (
+        <form
+          className={className}
+          onSubmit={(e) => {
+            // Prevent default "form submit"
+            e.preventDefault();
+            // And handle form submission by user defined 'onSubmit' handler.
+            onSubmit && onSubmit(form.value, helpers, e);
+          }}
+          ref={handleRef}
+        >
+          {children}
+        </form>
+      );
+    }
+
+    // Or defaults to "div" which allow nesting.
     return (
-      <form
-        className="p-4 bg-yellow-400"
-        onSubmit={(e) => {
-          // Prevent default "form submit"
-          e.preventDefault();
-          // And handle form submission by user defined 'onSubmit' handler.
-          onSubmit && onSubmit(form.value, helpers, e);
-        }}
-        ref={ref}
-      >
+      <div className={className} ref={handleRef}>
         {children}
-      </form>
+      </div>
     );
-  },
+  }),
 );

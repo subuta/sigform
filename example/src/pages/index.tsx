@@ -1,6 +1,6 @@
 import { TodoApp } from "@/components/TodoApp";
 import cx from "classnames";
-import React, { useId, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useRef } from "react";
 import { SigForm } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";

@@ -13,6 +13,7 @@ import {
 } from "@preact/signals-react";
 import React, {
   ComponentType,
+  MutableRefObject,
   Ref,
   useCallback,
   useEffect,
@@ -33,7 +34,7 @@ export type SigfieldProps<P, T> = P & {
   // Signal instance represents field value.
   field: Signal<T>;
   // Use custom "dataRef" for applying "data-sigform" to component node.
-  dataRef: Ref<any>;
+  dataRef: MutableRefObject<any>;
   // Error of field
   error?: string;
   // Field helpers.
