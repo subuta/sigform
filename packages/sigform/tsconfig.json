@@ -1,7 +1,13 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "es5",
+      "es6",
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "target": "es6",
     "paths": {},
     "allowJs": true,
@@ -15,6 +21,8 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "strictPropertyInitialization": false,
+    "forceConsistentCasingInFileNames": true,
     "jsx": "react"
   },
   "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx"],

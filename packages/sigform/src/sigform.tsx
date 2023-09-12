@@ -72,7 +72,9 @@ export const SigForm = sigform(
 
       // Fetch value on mount.
       requestAnimationFrame(() => {
-        form.value = ctx.getFormData(name);
+        if (!props.signal) {
+          form.value = ctx.getFormData(name);
+        }
       });
 
       return () => {
@@ -94,13 +96,6 @@ export const SigForm = sigform(
       untracked(() => {
         onChange && onChange(form.peek(), helpers);
       });
-    });
-
-    // Apply outer signal modification into form values.
-    useSignalEffect(() => {
-      if (props.signal) {
-        ctx.setFormValues(props.signal.value);
-      }
     });
 
     const handleRef = useCallback((r: any) => {

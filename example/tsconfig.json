@@ -1,6 +1,12 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "es5",
+      "es6",
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "paths": {
       "sigform": ["../packages/sigform/src/index.ts"],
       "@/*": ["./src/*"]

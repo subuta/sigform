@@ -153,7 +153,6 @@ export const sigfield = <P = any, T = any>(
     return (
       <Component
         {...(rest as any)}
-        key={name}
         name={name}
         field={field}
         dataRef={dataRef}

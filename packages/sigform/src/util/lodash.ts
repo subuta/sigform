@@ -9,7 +9,9 @@ export const get = (obj: Record<string, any>, path: string, defValue?: any) => {
   if (!path) return undefined;
   // Check if path is string or array. Regex : ensure that we do not have '.' and brackets.
   // Regex explained: https://regexr.com/58j0k
-  const pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g);
+  const pathArray = (
+    Array.isArray(path) ? path : path.match(/([^[.\]])+/g)
+  ) as string[];
   invariant(pathArray, "must exists");
 
   // Find value
@@ -24,7 +26,9 @@ export const get = (obj: Record<string, any>, path: string, defValue?: any) => {
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#set)
 export const set = (obj: Record<string, any>, path: string, value: any) => {
   // Regex explained: https://regexr.com/58j0k
-  const pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g);
+  const pathArray = (
+    Array.isArray(path) ? path : path.match(/([^[.\]])+/g)
+  ) as string[];
   invariant(pathArray, "must exists");
 
   pathArray.reduce((acc: Record<string, any>, key: string, i: number) => {
