@@ -3,9 +3,11 @@ import {
   SigformContext,
   useSigformContext,
 } from "./context";
+import { deepSignal } from "./deepSignal";
 import { signal } from "@preact/signals-core";
 import {
   Signal,
+  effect,
   untracked,
   useComputed,
   useSignalEffect,
@@ -55,7 +57,8 @@ export const SigForm = sigform(
 
     // Use provided signal or create own.
     const form = useMemo(
-      () => props.signal ?? signal<Record<string, any> | undefined>(undefined),
+      () =>
+        props.signal ?? deepSignal<Record<string, any> | undefined>(undefined),
       [],
     );
 
@@ -81,7 +84,7 @@ export const SigForm = sigform(
         // Unregister form context on unmount.
         ctx.unRegisterField(name);
       };
-    }, []);
+    }, [name]);
 
     const helpers = {
       setFormErrors: ctx.setFormErrors,

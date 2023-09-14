@@ -1,6 +1,6 @@
 import { SigFormData, SigFormField } from "../context";
+import { unflatten } from "./index";
 import { get } from "./lodash";
-import { unflatten } from "flat";
 import invariant from "tiny-invariant";
 
 export const computeFieldTree = (

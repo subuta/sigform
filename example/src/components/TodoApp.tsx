@@ -1,7 +1,7 @@
 import { v4 as uuid } from "@lukeed/uuid";
 import { untracked, useSignalEffect } from "@preact/signals-react";
 import cx from "classnames";
-import React from "react";
+import React, { useEffect } from "react";
 import { sigfield } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";
@@ -53,6 +53,7 @@ const TodoInput = sigfield<
 
       <div className="ml-2 h-[34px] flex items-center">
         <button
+          type="button"
           className="flex items-center text-xl text-gray-400 "
           onClick={() => onRemove(field.value)}
         >
@@ -74,17 +75,12 @@ export const TodoApp = sigfield<{}, Todo[]>((props) => {
   const isEmpty = todos.length === 0;
 
   // Field level validation example.
-  useSignalEffect(() => {
+  useEffect(() => {
     const todos = field.value;
     if (todos[0] && todos[0].task === "hoge") {
-      // In some case, we have to delay 'setFieldError' to nextTick.
-      // For example, We have `helpers.clearFormErrors();` in SigForm.onChange and that needs to be run before this line.
-      // Or It's better to only do error check inside `Field(Component)` or `Form`, not mix both.
-      requestAnimationFrame(() => {
-        untracked(() => helpers.setFieldError([{ task: "fuga" }]));
-      });
+      untracked(() => helpers.setFieldError([{ task: "fuga" }]));
     }
-  });
+  }, [field.value]);
 
   return (
     <div className="p-4 bg-gray-100 rounded-lg" ref={dataRef}>
@@ -101,7 +97,7 @@ export const TodoApp = sigfield<{}, Todo[]>((props) => {
               name={i}
               defaultValue={todo}
               onRemove={({ id }) => {
-                field.value = todos.filter((todo) => todo.id !== id);
+                todos.splice(i, 1);
               }}
             />
           );
@@ -112,7 +108,7 @@ export const TodoApp = sigfield<{}, Todo[]>((props) => {
         type="button"
         className={cx(buttonClass, "mt-4 bg-white")}
         onClick={() => {
-          field.value = [...todos, { id: uuid(), task: "" }];
+          todos.push({ id: uuid(), task: "" });
         }}
       >
         Add TODO

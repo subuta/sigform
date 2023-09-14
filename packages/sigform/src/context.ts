@@ -1,9 +1,7 @@
-import { getFormData, isObject, set, sortFields } from "./util";
-import { Signal } from "@preact/signals-react";
-import { flatten } from "flat";
+import { flatten, getFormData, isObject, set, sortFields } from "./util";
+import { Signal, useSignal } from "@preact/signals-react";
 import { useCallback, useId, useRef, useState } from "react";
 import isEqual from "react-fast-compare";
-import invariant from "tiny-invariant";
 import { createContainer } from "unstated-next";
 
 export type SigFormField<T> = {
@@ -19,7 +17,7 @@ export type SigFormData = Record<string, any>;
 export const useSigform = () => {
   const formId = useId();
 
-  const fields = useRef<SigFormField<any>[]>([]);
+  const fields = useSignal<SigFormField<any>[]>([]);
   const [errors, setErrors] = useState<SigFormErrors>({});
 
   const registerField = useCallback(function <T>(
@@ -31,8 +29,8 @@ export const useSigform = () => {
 
     // console.log("register", name);
 
-    fields.current = [
-      ...fields.current,
+    fields.value = [
+      ...fields.value,
       {
         fieldTree: fieldTree,
         name,
@@ -40,7 +38,7 @@ export const useSigform = () => {
       },
     ];
     // Sort fields everytime after registration.
-    fields.current = sortFields(fields.current);
+    fields.value = sortFields(fields.value);
   }, []);
 
   const unRegisterField = useCallback((fieldName: string) => {
@@ -48,13 +46,13 @@ export const useSigform = () => {
 
     // console.log("unregister", fieldName);
 
-    fields.current = fields.current.filter((field) => field.name !== fieldName);
+    fields.value = fields.value.filter((field) => field.name !== fieldName);
     // Sort fields everytime after un-registration.
-    fields.current = sortFields(fields.current);
+    fields.value = sortFields(fields.value);
   }, []);
 
   const getField = useCallback((fieldName: string) => {
-    return fields.current.find((field) => field.name === fieldName);
+    return fields.value.find((field) => field.name === fieldName);
   }, []);
 
   // Get field's value.
@@ -129,7 +127,7 @@ export const useSigform = () => {
   );
 
   const getFormDataMemo = useCallback((name = "") => {
-    return getFormData(fields.current, name);
+    return getFormData(fields.value, name);
   }, []);
 
   const setErrorsIfChanged = (nextErrors: SigFormErrors) => {
@@ -139,15 +137,11 @@ export const useSigform = () => {
 
   const setFormErrors = useCallback(
     (formErrors: Record<string, any>, prefix = formId) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setErrorsIfChanged(
-            flatten({
-              [prefix]: formErrors,
-            }),
-          );
-        });
-      });
+      setErrorsIfChanged(
+        flatten({
+          [prefix]: formErrors,
+        }),
+      );
     },
     [],
   );
@@ -158,7 +152,9 @@ export const useSigform = () => {
 
   return {
     formId,
+    fields,
     registerField,
+    getField,
     unRegisterField,
     propagateChange,
     getFormData: getFormDataMemo,

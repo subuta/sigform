@@ -1,11 +1,9 @@
-import {
-  SigFormContextHelpers,
-  SigFormData,
-  useSigformContext,
-} from "./context";
+import { useSigformContext } from "./context";
+import { deepSignal } from "./deepSignal";
 import { computeFieldTree } from "./util";
 import {
   Signal,
+  effect,
   untracked,
   useComputed,
   useSignal,
@@ -14,7 +12,6 @@ import {
 import React, {
   ComponentType,
   MutableRefObject,
-  Ref,
   useCallback,
   useEffect,
   useMemo,
@@ -43,6 +40,7 @@ export type SigfieldProps<P, T> = P & {
 
 export type OuterSigfieldProps<T> = {
   name: string | number;
+  signal?: Signal<T>;
   defaultValue?: T;
 };
 
@@ -53,6 +51,8 @@ const useSyncFieldName = (name: string, formId: string) => {
   const fieldTree = useSignal<string[]>([]);
   const fullFieldName = useComputed(() => fieldTree.value.join("."));
   const dataRef = useRef<HTMLElement | null>(null);
+
+  const ctx = useSigformContext();
 
   // Sync fieldName to DOM structure.
   useEffect(() => {
@@ -66,12 +66,20 @@ const useSyncFieldName = (name: string, formId: string) => {
 
     // Persist change into DOM.
     node.dataset.sigform = name;
-
-    requestAnimationFrame(() => {
-      // return computed fieldTree by walk parentNodes.
-      fieldTree.value = computeFieldTree(node, formId);
-    });
   }, [name]);
+
+  useEffect(() => {
+    // Re-compute fieldTree on DOM change.
+    ctx.fields.value;
+    requestAnimationFrame(() => {
+      // SEE: [reactjs - Typescript: how to declare a type that includes all types extending a common type? - Stack Overflow](https://stackoverflow.com/questions/57201223/typescript-how-to-declare-a-type-that-includes-all-types-extending-a-common-typ)
+      const node = dataRef.current;
+      if (node) {
+        // return computed fieldTree by walk parentNodes.
+        fieldTree.value = computeFieldTree(node, formId);
+      }
+    });
+  });
 
   return {
     fieldTree,
@@ -84,11 +92,16 @@ export const sigfield = <P = any, T = any>(
   Component: ComponentType<SigfieldProps<P, T>>,
 ) => {
   return (props: P & OuterSigfieldProps<T>) => {
-    const { defaultValue, ...rest } = props;
+    const { defaultValue, signal, ...rest } = props;
     const name = String(props.name);
 
     const ctx = useSigformContext();
-    const field = useSignal<T | null>(defaultValue ?? null);
+
+    // Use provided signal or create own.
+    const field = useMemo(
+      () => props.signal ?? deepSignal(defaultValue ?? null),
+      [],
+    );
 
     const { fieldTree, fullFieldName, dataRef } = useSyncFieldName(
       name,
@@ -153,6 +166,7 @@ export const sigfield = <P = any, T = any>(
     return (
       <Component
         {...(rest as any)}
+        fullName={fullFieldName.value}
         name={name}
         field={field}
         dataRef={dataRef}

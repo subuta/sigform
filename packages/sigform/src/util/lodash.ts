@@ -1,4 +1,8 @@
+import rfdc from "rfdc";
 import invariant from "tiny-invariant";
+
+// Tiny & faster `_.clone` function.
+export const clone = rfdc();
 
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#isObject)
 export const isObject = (a: any) => a instanceof Object;

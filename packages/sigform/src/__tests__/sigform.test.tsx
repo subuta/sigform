@@ -1,15 +1,17 @@
+import { nextTick } from "../util";
 import { SigForm } from "@/..";
+import { jest } from "@jest/globals";
 import "@testing-library/jest-dom";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { ArrayInput } from "fixtures/ArrayInput";
 import { ObjectInput } from "fixtures/ObjectInput";
 import { TextInput } from "fixtures/TextInput";
 import React from "react";
 import invariant from "tiny-invariant";
 
-const nextTick = () => new Promise((resolve) => requestAnimationFrame(resolve));
+const waitNextTick = () => waitFor(() => nextTick());
 
-const getHandlerData = (fn: jest.Mock | undefined, nth: number) => {
+const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   if (!fn) return null;
   const args = fn.mock.calls[nth - 1];
   return args[0];
@@ -24,7 +26,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await nextTick();
+      await waitNextTick();
 
       const input = container.querySelector(`input[name="text"]`);
 
@@ -78,7 +80,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await nextTick();
+      await waitNextTick();
 
       const input = container.querySelector(`input[name="text"]`);
       invariant(input, "must exists");
@@ -87,18 +89,18 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onChange, 1)).toEqual({ text: "hello" });
+      expect(dataOfMockCall(onChange, 1)).toEqual({ text: "hello" });
 
       fireEvent.change(input, { target: { value: "world" } });
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(2);
-      expect(getHandlerData(onChange, 2)).toEqual({ text: "world" });
+      expect(dataOfMockCall(onChange, 2)).toEqual({ text: "world" });
 
       fireEvent.submit(form);
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onSubmit, 1)).toEqual({ text: "world" });
+      expect(dataOfMockCall(onSubmit, 1)).toEqual({ text: "world" });
     });
 
     it("should handle array input", async () => {
@@ -116,7 +118,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await nextTick();
+      await waitNextTick();
 
       let firstInput = container.querySelector(`input[name="0.value"]`);
       invariant(firstInput, "must exists");
@@ -125,7 +127,7 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onChange, 1)).toEqual({
+      expect(dataOfMockCall(onChange, 1)).toEqual({
         array: [
           { id: "1", value: "hello" },
           { id: "2", value: "world" },
@@ -136,7 +138,7 @@ describe("sigform", () => {
       expect(firstInput).toHaveValue("goodbye");
 
       expect(onChange).toHaveBeenCalledTimes(2);
-      expect(getHandlerData(onChange, 2)).toEqual({
+      expect(dataOfMockCall(onChange, 2)).toEqual({
         array: [
           { id: "1", value: "goodbye" },
           { id: "2", value: "world" },
@@ -146,7 +148,7 @@ describe("sigform", () => {
       fireEvent.submit(form);
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onSubmit, 1)).toEqual({
+      expect(dataOfMockCall(onSubmit, 1)).toEqual({
         array: [
           { id: "1", value: "goodbye" },
           { id: "2", value: "world" },
@@ -172,14 +174,14 @@ describe("sigform", () => {
 
       // Array data must be in sync.
       expect(onChange).toHaveBeenCalledTimes(3);
-      expect(getHandlerData(onChange, 3)).toEqual({
+      expect(dataOfMockCall(onChange, 3)).toEqual({
         array: [{ id: "2", value: "world" }],
       });
 
       fireEvent.submit(form);
 
       expect(onSubmit).toHaveBeenCalledTimes(2);
-      expect(getHandlerData(onSubmit, 2)).toEqual({
+      expect(dataOfMockCall(onSubmit, 2)).toEqual({
         array: [{ id: "2", value: "world" }],
       });
     });
@@ -193,7 +195,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await nextTick();
+      await waitNextTick();
 
       const input = container.querySelector(`input[name="propA"]`);
       invariant(input, "must exists");
@@ -202,18 +204,18 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onChange, 1)).toEqual({ obj: { propA: "hello" } });
+      expect(dataOfMockCall(onChange, 1)).toEqual({ obj: { propA: "hello" } });
 
       fireEvent.change(input, { target: { value: "world" } });
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(2);
-      expect(getHandlerData(onChange, 2)).toEqual({ obj: { propA: "world" } });
+      expect(dataOfMockCall(onChange, 2)).toEqual({ obj: { propA: "world" } });
 
       fireEvent.submit(form);
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
-      expect(getHandlerData(onSubmit, 1)).toEqual({ obj: { propA: "world" } });
+      expect(dataOfMockCall(onSubmit, 1)).toEqual({ obj: { propA: "world" } });
     });
   });
 });
