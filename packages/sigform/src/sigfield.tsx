@@ -41,6 +41,7 @@ export type SigfieldProps<P, T> = P & {
 export type OuterSigfieldProps<T> = {
   name: string | number;
   signal?: Signal<T>;
+  value?: T;
   defaultValue?: T;
 };
 
@@ -120,6 +121,11 @@ export const sigfield = <P = any, T = any>(
       };
     }, [fullFieldName.value]);
 
+    useEffect(() => {
+      if (props.value === undefined) return;
+      field.value = props.value;
+    }, [props.value]);
+
     // Subscribe field change
     useSignalEffect(() => {
       field.value;
@@ -166,7 +172,6 @@ export const sigfield = <P = any, T = any>(
     return (
       <Component
         {...(rest as any)}
-        fullName={fullFieldName.value}
         name={name}
         field={field}
         dataRef={dataRef}

@@ -4,6 +4,7 @@ import {
   useSigformContext,
 } from "./context";
 import { deepSignal } from "./deepSignal";
+import { clone } from "./util";
 import { signal } from "@preact/signals-core";
 import {
   Signal,
@@ -22,6 +23,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import isEqual from "react-fast-compare";
 import invariant from "tiny-invariant";
 
 type ChildrenProps = {
@@ -54,6 +56,8 @@ export const SigForm = sigform(
   forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
     const { onSubmit, onChange, children, className = "" } = props;
     const ctx = useSigformContext();
+
+    const lastData = useRef<any | null>(null);
 
     // Use provided signal or create own.
     const form = useMemo(
@@ -95,10 +99,12 @@ export const SigForm = sigform(
     useSignalEffect(() => {
       // Skip calling "onChange" fn for "undefined" value.
       if (form.value === undefined) return;
-      // Subscribe change
-      untracked(() => {
-        onChange && onChange(form.peek(), helpers);
-      });
+      // Emit 'onChange' only if we have any diff by deep comparison.
+      let data = clone(form.value);
+      if (!isEqual(lastData.current, data)) {
+        onChange && onChange(data, helpers);
+      }
+      lastData.current = data;
     });
 
     const handleRef = useCallback((r: any) => {
@@ -119,7 +125,7 @@ export const SigForm = sigform(
             // Prevent default "form submit"
             e.preventDefault();
             // And handle form submission by user defined 'onSubmit' handler.
-            onSubmit && onSubmit(form.value, helpers, e);
+            onSubmit && onSubmit(clone(form.value), helpers, e);
           }}
           ref={handleRef}
         >

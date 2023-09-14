@@ -1,6 +1,6 @@
 {
   "name": "sigform",
-  "version": "0.10.12",
+  "version": "0.10.13",
   "description": "Nestable react form UI with Signals",
   "type": "module",
   "main": "./src/index.ts",
