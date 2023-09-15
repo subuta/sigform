@@ -1,13 +1,13 @@
 import { sigfield } from "../src";
 import React from "react";
 
-export const TextInput = sigfield<{}, string>((props) => {
-  const { name, field, dataRef } = props;
+export const TextInput = sigfield<{}, string>((props, ref) => {
+  const { name, field } = props;
 
   // console.log(name, field.value);
 
   return (
-    <div className="p-4 bg-red-400" ref={dataRef}>
+    <div className="p-4 bg-red-400" ref={ref}>
       <input
         name={name}
         type="text"

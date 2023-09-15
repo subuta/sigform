@@ -1,5 +1,5 @@
 import { v4 as uuid } from "@lukeed/uuid";
-import { untracked, useSignalEffect } from "@preact/signals-react";
+import { untracked, useSignal, useSignalEffect } from "@preact/signals-react";
 import cx from "classnames";
 import React, { useEffect } from "react";
 import { sigfield } from "sigform";
@@ -7,33 +7,35 @@ import { sigfield } from "sigform";
 const buttonClass = "px-2 py-1 rounded border";
 
 // Input field for string type.
-const TextInput = sigfield<{ className?: string }, string>((props) => {
-  const { className, dataRef, field, error } = props;
+export const TextInput = sigfield<{ className?: string }, string>(
+  (props, ref) => {
+    const { className, field, error } = props;
 
-  return (
-    <div className={cx("relative", error && "pb-6")}>
-      <input
-        className={cx(
-          className,
-          "px-2 py-1 border rounded",
-          error && "border-red-500",
+    return (
+      <div className={cx("relative", error && "pb-6")}>
+        <input
+          className={cx(
+            className,
+            "px-2 py-1 border rounded",
+            error && "border-red-500",
+          )}
+          type="text"
+          ref={ref}
+          onChange={(e) => {
+            field.value = e.target.value;
+          }}
+          value={field.value}
+        />
+
+        {error && (
+          <p className="position absolute bottom-0 left-0 text-red-500 text-sm font-bold">
+            {error}
+          </p>
         )}
-        type="text"
-        ref={dataRef}
-        onChange={(e) => {
-          field.value = e.target.value;
-        }}
-        value={field.value}
-      />
-
-      {error && (
-        <p className="position absolute bottom-0 left-0 text-red-500 text-sm font-bold">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-});
+      </div>
+    );
+  },
+);
 
 type Todo = {
   id: string;
@@ -44,12 +46,19 @@ type Todo = {
 const TodoInput = sigfield<
   { className?: string; onRemove: (todo: Todo) => void },
   Todo
->((props) => {
-  const { className = "", onRemove, dataRef, field } = props;
+>((props, ref) => {
+  const { className = "", onRemove, field } = props;
+
+  const task = useSignal(field.value.task);
+
+  useSignalEffect(() => {
+    field.value.task = task.value;
+  });
 
   return (
-    <div className={cx(className, "flex items-start")} ref={dataRef}>
-      <TextInput name="task" defaultValue={field.value.task} />
+    <div className={cx(className, "flex items-start")} ref={ref}>
+      <TextInput.Raw signal={task} />
+      {/*<TextInput name="task" defaultValue={field.value.task} />*/}
 
       <div className="ml-2 h-[34px] flex items-center">
         <button
@@ -68,8 +77,8 @@ const TodoInput = sigfield<
 });
 
 // Input field for TODO array type.
-export const TodoApp = sigfield<{}, Todo[]>((props) => {
-  const { dataRef, field, helpers } = props;
+export const TodoApp = sigfield<{}, Todo[]>((props, ref) => {
+  const { field, helpers } = props;
 
   const todos = field.value;
   const isEmpty = todos.length === 0;
@@ -83,7 +92,7 @@ export const TodoApp = sigfield<{}, Todo[]>((props) => {
   }, [field.value]);
 
   return (
-    <div className="p-4 bg-gray-100 rounded-lg" ref={dataRef}>
+    <div className="p-4 bg-gray-100 rounded-lg" ref={ref}>
       {isEmpty ? (
         <p>No task</p>
       ) : (
