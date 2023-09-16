@@ -102,7 +102,9 @@ export const sigfield = <P = any, T = any>(
   const Component = forwardRef(RawComponent);
 
   // Use "sigfield" as default renderer
-  const render = (props: P & OutersigfieldProps<T>) => {
+  const render = (
+    props: Omit<P, "name" | "defaultValue"> & OutersigfieldProps<T>,
+  ) => {
     const { defaultValue, ...rest } = props;
     const name = String(props.name);
 
@@ -184,17 +186,19 @@ export const sigfield = <P = any, T = any>(
   };
 
   // Also export "RawField" as "Component.Raw"
-  render.Raw = (props: P & OuterRawFieldProps<T>) => {
+  render.Raw = (
+    props: Omit<P, "onChange" | "value"> & OuterRawFieldProps<T>,
+  ) => {
     const { value, onChange, signal, ...rest } = props;
 
     const emptyValue = value === undefined;
 
-    if (signal && (value || onChange)) {
+    if (signal && value) {
       invariant(
         false,
         `Not allowed to pass 'signal' and 'value & onChange' same time.`,
       );
-    } else if (!signal && (emptyValue || !onChange)) {
+    } else if (!signal && emptyValue) {
       invariant(false, `Must have 'signal' or 'value & onChange' props`);
     }
 

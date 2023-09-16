@@ -2,6 +2,7 @@ import { deepSignal } from "../deepSignal";
 import { clone, nextTick } from "../util";
 import { jest } from "@jest/globals";
 import { effect } from "@preact/signals-react";
+import * as util from "util";
 
 const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   if (!fn) return null;
@@ -26,6 +27,29 @@ describe("sigform", () => {
 
       expect(dataOfMockCall(onChange, 1)).toEqual([]);
       expect(dataOfMockCall(onChange, 2)).toEqual(["a"]);
+    });
+
+    it("should create signal for array of objects", async () => {
+      const array = deepSignal<{ hoge: { fuga: string } }[]>([]);
+
+      const onChange = jest.fn();
+
+      effect(() => {
+        onChange(clone(array.value));
+      });
+
+      array.value.push({ hoge: { fuga: "piyo" } });
+
+      // SEE: [Util | Node.js v20.6.1 Documentation](https://nodejs.org/docs/latest-v20.x/api/util.html#utiltypesisproxyvalue)
+      expect(util.types.isProxy(array.value[0].hoge)).toEqual(true);
+
+      array.value[0].hoge.fuga = "foo";
+
+      expect(onChange).toHaveBeenCalledTimes(3);
+
+      expect(dataOfMockCall(onChange, 1)).toEqual([]);
+      expect(dataOfMockCall(onChange, 2)).toEqual([{ hoge: { fuga: "piyo" } }]);
+      expect(dataOfMockCall(onChange, 3)).toEqual([{ hoge: { fuga: "foo" } }]);
     });
 
     it("should create signal for array with reactive style", async () => {
@@ -180,7 +204,6 @@ describe("sigform", () => {
       expect(dataOfMockCall(onChange, 1)).toEqual({});
       expect(dataOfMockCall(onChange, 2)).toEqual({ hoge: { fuga: "piyo" } });
       expect(dataOfMockCall(onChange, 3)).toEqual({ hoge: { fuga: "foo" } });
-      // expect(dataOfMockCall(onChange, 3)).toEqual({ hoge: {} });
     });
   });
 });

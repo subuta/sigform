@@ -1,9 +1,14 @@
 import { clone, isObject } from "./util";
 import { signal as asSignal } from "@preact/signals-core";
 import { Signal } from "@preact/signals-react";
+import { useMemo } from "react";
 import isEqual from "react-fast-compare";
 
 const noop = () => {};
+
+export const useDeepSignal = <T>(value: T): Signal<T> => {
+  return useMemo(() => deepSignal(value), []);
+};
 
 export const deepSignal = <T>(value: T): Signal<T> => {
   const watch = (value: any, onChange = noop): T => {
@@ -12,6 +17,7 @@ export const deepSignal = <T>(value: T): Signal<T> => {
       if (!Array.isArray(v) && !isObject(v)) {
         return v;
       }
+
       return new Proxy(v, {
         deleteProperty: (target, property) => {
           if (Array.isArray(target)) {
@@ -83,12 +89,22 @@ export const deepSignal = <T>(value: T): Signal<T> => {
   };
 
   const propagateChange = () => {
-    signal.value = watch(clone(signal.value), propagateChange);
+    signal.value = watch(signal.value, propagateChange);
   };
 
   const signal = asSignal(watch(value, propagateChange));
 
   return new Proxy(signal, {
+    get(target: Signal<T>, p: string | symbol, receiver: any): any {
+      // Override "Signal.toJSON" method.
+      if (p === "toJSON") {
+        return () => {
+          return clone(target.value);
+        };
+      }
+      return Reflect.get(target, p, receiver);
+    },
+
     set: (target, property, val, receiver) => {
       if (property === "value") {
         // Start watching values for "immutable assignment".
