@@ -10,11 +10,16 @@ export const useDeepSignal = <T>(value: T): Signal<T> => {
   return useMemo(() => deepSignal(value), []);
 };
 
+const IS_PROXY = Symbol("isProxy");
+
+export const isProxy = (v: any) => v && v[IS_PROXY];
+
 export const deepSignal = <T>(value: T): Signal<T> => {
   const watch = (value: any, onChange = noop): T => {
     const wrap = (v: any) => {
       // Ignore non-object like value.
-      if (!Array.isArray(v) && !isObject(v)) {
+      // Or already wrapped in Proxy.
+      if ((!Array.isArray(v) && !isObject(v)) || isProxy(v)) {
         return v;
       }
 
