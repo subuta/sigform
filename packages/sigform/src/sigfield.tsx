@@ -1,8 +1,9 @@
 import { useSigformContext } from "./context";
-import { deepSignal } from "./deepSignal";
-import { computeFieldTree } from "./util";
+import { deepSignal, meta } from "./deepSignal";
+import { computeFieldTree, get } from "./util";
 import {
   Signal,
+  signal as asSignal,
   untracked,
   useComputed,
   useSignal,
@@ -74,11 +75,11 @@ export type RawFieldProps<P, T> = P & {
   field: Signal<T>;
 };
 
-export type SigfieldProps<P, T> = RawFieldProps<P, T> & {
+export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
   // Name of field
   name?: string;
   // Error of field
-  error?: string;
+  error?: E;
   // Field helpers.
   helpers?: sigfieldHelpers;
 };
@@ -89,14 +90,15 @@ export type OutersigfieldProps<T> = {
   defaultValue?: T;
 };
 
-export type OuterRawFieldProps<T> = {
+export type OuterRawFieldProps<T, E> = {
+  error?: E;
   signal?: Signal<T>;
   onChange?: (value: T) => void;
   value?: T;
 };
 
-export const sigfield = <P = any, T = any>(
-  RawComponent: ForwardRefRenderFunction<any, SigfieldProps<P, T>>,
+export const sigfield = <P = any, T = any, E = string>(
+  RawComponent: ForwardRefRenderFunction<any, SigfieldProps<P, T, E>>,
 ) => {
   // Wrap component in forwardRef.
   const Component = forwardRef(RawComponent);
@@ -111,7 +113,10 @@ export const sigfield = <P = any, T = any>(
     const ctx = useSigformContext();
 
     // Use provided signal or create own.
-    const field = useMemo(() => deepSignal(defaultValue ?? null), []);
+    const field = useMemo(
+      () => deepSignal(defaultValue ?? null) as Signal<T>,
+      [],
+    );
 
     const { fieldTree, fullFieldName, ref } = useSyncFieldName(
       name,
@@ -119,7 +124,7 @@ export const sigfield = <P = any, T = any>(
     );
 
     const error = useMemo(() => {
-      return ctx.errors[fullFieldName.value];
+      return get(ctx.errors, fullFieldName.value);
     }, [ctx.errors, fullFieldName.value]);
 
     // (re-)register field into context on fullFieldName change.
@@ -135,9 +140,7 @@ export const sigfield = <P = any, T = any>(
       field.value;
 
       // Propagate change into parent.
-      untracked(() => {
-        ctx.propagateChange(fullFieldName.value, name);
-      });
+      ctx.propagateChange(fullFieldName.peek(), name);
     });
 
     if (DEBUG) {
@@ -187,7 +190,7 @@ export const sigfield = <P = any, T = any>(
 
   // Also export "RawField" as "Component.Raw"
   render.Raw = (
-    props: Omit<P, "onChange" | "value"> & OuterRawFieldProps<T>,
+    props: Omit<P, "onChange" | "value"> & OuterRawFieldProps<T, E>,
   ) => {
     const { value, onChange, signal, ...rest } = props;
 
@@ -204,10 +207,11 @@ export const sigfield = <P = any, T = any>(
 
     // Use provided signal or create own.
     const field = useMemo(
-      () => signal ?? deepSignal<T | undefined>(value ?? undefined),
+      () => signal ?? (deepSignal(value ?? (undefined as any)) as Signal<T>),
       [],
     );
 
+    // Apply outside value changes
     useEffect(() => {
       if (props.value === undefined) return;
       field.value = props.value;

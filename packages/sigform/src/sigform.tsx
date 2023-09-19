@@ -61,8 +61,7 @@ export const SigForm = sigform(
 
     // Use provided signal or create own.
     const form = useMemo(
-      () =>
-        props.signal ?? deepSignal<Record<string, any> | undefined>(undefined),
+      () => props.signal ?? deepSignal<Record<string, any>>(undefined),
       [],
     );
 
@@ -74,14 +73,13 @@ export const SigForm = sigform(
       invariant(ref.current, "must exists");
       ref.current.dataset.sigform = name;
 
-      // Register form into context.
-      ctx.registerField([name], form);
-
       // Fetch value on mount.
       requestAnimationFrame(() => {
         if (!props.signal) {
           form.value = ctx.getFormData(name);
         }
+        // Register form into context.
+        ctx.registerField([name], form);
       });
 
       return () => {

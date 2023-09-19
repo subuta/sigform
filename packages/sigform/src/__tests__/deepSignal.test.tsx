@@ -1,7 +1,8 @@
-import { deepSignal, isProxy } from "../deepSignal";
+import { deepSignal, isProxy, mutate } from "../deepSignal";
 import { clone } from "../util";
 import { jest } from "@jest/globals";
-import { effect } from "@preact/signals-react";
+import { effect, signal } from "@preact/signals-react";
+import { produceWithPatches } from "immer";
 
 const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   if (!fn) return null;
@@ -9,7 +10,102 @@ const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   return args[0];
 };
 
-describe("sigform", () => {
+describe("deepSignal", () => {
+  describe("immer integration", () => {
+    it("should produceWithPatches works well with deepSignal", async () => {
+      const tryProduceWithPatches = (base: any, recipe: any) => {
+        const [next, patches] = produceWithPatches(base, recipe) as any;
+        return [next, patches];
+      };
+
+      expect(tryProduceWithPatches({}, () => {})).toEqual([{}, []]);
+      expect(tryProduceWithPatches([], () => [])).toEqual([
+        [],
+        [{ op: "replace", path: [], value: [] }],
+      ]);
+
+      expect(tryProduceWithPatches(signal({}).value, () => {})).toEqual([
+        {},
+        [],
+      ]);
+      expect(tryProduceWithPatches(signal([]).value, () => [])).toEqual([
+        [],
+        [{ op: "replace", path: [], value: [] }],
+      ]);
+
+      expect(tryProduceWithPatches(deepSignal({}).value, () => {})).toEqual([
+        {},
+        [],
+      ]);
+      expect(tryProduceWithPatches(deepSignal([]).value, () => [])).toEqual([
+        [],
+        [{ op: "replace", path: [], value: [] }],
+      ]);
+    });
+  });
+
+  describe("partial mutation", () => {
+    it("should allow mutate nested property", async () => {
+      const test = deepSignal([{ hoge: { fuga: { piyo: "foo" } } }]);
+      expect(isProxy(test.value)).toEqual(true);
+
+      const onChange = jest.fn();
+      effect(() => {
+        onChange(clone(test.value));
+      });
+
+      mutate(test.value[0].hoge.fuga, (draft) => {
+        draft.piyo = "baz";
+      });
+
+      mutate(test.value[0].hoge, (draft) => {
+        draft.fuga = { piyo: "baa" };
+      });
+
+      expect(onChange).toHaveBeenCalledTimes(3);
+      expect(dataOfMockCall(onChange, 1)).toEqual([
+        { hoge: { fuga: { piyo: "foo" } } },
+      ]);
+      expect(dataOfMockCall(onChange, 2)).toEqual([
+        { hoge: { fuga: { piyo: "baz" } } },
+      ]);
+      expect(dataOfMockCall(onChange, 3)).toEqual([
+        { hoge: { fuga: { piyo: "baa" } } },
+      ]);
+    });
+
+    it("should allow mutate nested array destructive operation", async () => {
+      const test = deepSignal([{ id: 1, value: "hoge" }]);
+      expect(isProxy(test.value)).toEqual(true);
+
+      const onChange = jest.fn();
+      effect(() => {
+        onChange(clone(test.value));
+      });
+
+      mutate(test.value, (draft) => {
+        draft.push({ id: 2, value: "fuga" });
+      });
+
+      mutate(test.value, (draft) => {
+        return draft.filter((item) => item.id !== 1);
+      });
+
+      mutate(test.value[0], (draft) => {
+        draft.value = "piyo";
+      });
+
+      expect(onChange).toHaveBeenCalledTimes(4);
+      expect(dataOfMockCall(onChange, 1)).toEqual([{ id: 1, value: "hoge" }]);
+      expect(dataOfMockCall(onChange, 2)).toEqual([
+        { id: 1, value: "hoge" },
+        { id: 2, value: "fuga" },
+      ]);
+      expect(dataOfMockCall(onChange, 3)).toEqual([{ id: 2, value: "fuga" }]);
+      expect(dataOfMockCall(onChange, 4)).toEqual([{ id: 2, value: "piyo" }]);
+    });
+  });
+
   describe("onChange", () => {
     it("should create signal for array", async () => {
       const array = deepSignal<string[]>([]);
@@ -37,18 +133,15 @@ describe("sigform", () => {
         onChange(clone(array.value));
       });
 
-      array.value.push({ hoge: { fuga: "piyo" } });
+      mutate(array.value, (array) => {
+        array.push({ hoge: { fuga: "piyo" } });
+        array[0].hoge.fuga = "foo";
+      });
 
-      // SEE: [Util | Node.js v20.6.1 Documentation](https://nodejs.org/docs/latest-v20.x/api/util.html#utiltypesisproxyvalue)
-      expect(isProxy(array.value[0].hoge)).toEqual(true);
-
-      array.value[0].hoge.fuga = "foo";
-
-      expect(onChange).toHaveBeenCalledTimes(3);
+      expect(onChange).toHaveBeenCalledTimes(2);
 
       expect(dataOfMockCall(onChange, 1)).toEqual([]);
-      expect(dataOfMockCall(onChange, 2)).toEqual([{ hoge: { fuga: "piyo" } }]);
-      expect(dataOfMockCall(onChange, 3)).toEqual([{ hoge: { fuga: "foo" } }]);
+      expect(dataOfMockCall(onChange, 2)).toEqual([{ hoge: { fuga: "foo" } }]);
     });
 
     it("should create signal for array of objects as default value", async () => {
@@ -62,10 +155,9 @@ describe("sigform", () => {
         onChange(clone(array.value));
       });
 
-      // SEE: [Util | Node.js v20.6.1 Documentation](https://nodejs.org/docs/latest-v20.x/api/util.html#utiltypesisproxyvalue)
-      expect(isProxy(array.value[0].hoge)).toEqual(true);
-
-      array.value[0].hoge.fuga = "foo";
+      mutate(array.value, (array) => {
+        array[0].hoge.fuga = "foo";
+      });
 
       expect(onChange).toHaveBeenCalledTimes(2);
 
@@ -84,22 +176,30 @@ describe("sigform", () => {
 
       expect(dataOfMockCall(onChange, 1)).toEqual([]);
 
-      array.value.push("a");
+      mutate(array.value, (array) => {
+        array.push("a");
+      });
 
       expect(onChange).toHaveBeenCalledTimes(2);
       expect(dataOfMockCall(onChange, 2)).toEqual(["a"]);
 
-      array.value.push("b");
+      mutate(array.value, (array) => {
+        array.push("b");
+      });
 
       expect(onChange).toHaveBeenCalledTimes(3);
       expect(dataOfMockCall(onChange, 3)).toEqual(["a", "b"]);
 
-      array.value.pop();
+      mutate(array.value, (array) => {
+        array.pop();
+      });
 
       expect(onChange).toHaveBeenCalledTimes(4);
       expect(dataOfMockCall(onChange, 4)).toEqual(["a"]);
 
-      array.value.splice(0, 1);
+      mutate(array.value, (array) => {
+        array.splice(0, 1);
+      });
 
       expect(onChange).toHaveBeenCalledTimes(5);
       expect(dataOfMockCall(onChange, 5)).toEqual([]);
@@ -117,7 +217,9 @@ describe("sigform", () => {
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(dataOfMockCall(onChange, 1)).toEqual([1, 2, 3]);
 
-      array.value.shift();
+      mutate(array.value, (array) => {
+        array.shift();
+      });
 
       expect(onChange).toHaveBeenCalledTimes(2);
       expect(dataOfMockCall(onChange, 2)).toEqual([2, 3]);
@@ -132,17 +234,18 @@ describe("sigform", () => {
         onChange(clone(array.value));
       });
 
-      array.value = [...array.value, "a"];
-      array.value.push("b");
+      mutate(array.value, (array) => {
+        array = [...array, "a"];
+        array.push("b");
+        array.pop();
+        // Must return new array if draft is 'replaced' to new array.
+        return array;
+      });
 
-      array.value.pop();
-
-      expect(onChange).toHaveBeenCalledTimes(4);
+      expect(onChange).toHaveBeenCalledTimes(2);
 
       expect(dataOfMockCall(onChange, 1)).toEqual([]);
       expect(dataOfMockCall(onChange, 2)).toEqual(["a"]);
-      expect(dataOfMockCall(onChange, 3)).toEqual(["a", "b"]);
-      expect(dataOfMockCall(onChange, 4)).toEqual(["a"]);
     });
 
     it("should create signal for object", async () => {
@@ -154,7 +257,10 @@ describe("sigform", () => {
         onChange(clone(obj.value));
       });
 
-      obj.value = { fuga: "piyo" };
+      mutate(obj.value, (obj) => {
+        // Allow directly return new value.
+        return { fuga: "piyo" };
+      });
 
       expect(onChange).toHaveBeenCalledTimes(2);
 
@@ -171,7 +277,9 @@ describe("sigform", () => {
         onChange(clone(obj.value));
       });
 
-      obj.value.fuga = "piyo";
+      mutate(obj.value, (obj) => {
+        obj.fuga = "piyo";
+      });
 
       expect(onChange).toHaveBeenCalledTimes(2);
 
@@ -188,22 +296,17 @@ describe("sigform", () => {
         onChange(clone(obj.value));
       });
 
-      obj.value = { fuga: "piyo" };
-      obj.value = { ...obj.value, piyo: "foo" };
+      mutate(obj.value, (obj) => {
+        obj = { fuga: "piyo" };
+        obj = { ...obj, piyo: "foo" };
+        delete obj.piyo;
+        return obj;
+      });
 
-      delete obj.value.piyo;
-
-      expect(onChange).toHaveBeenCalledTimes(4);
+      expect(onChange).toHaveBeenCalledTimes(2);
 
       expect(dataOfMockCall(onChange, 1)).toEqual({});
       expect(dataOfMockCall(onChange, 2)).toEqual({ fuga: "piyo" });
-      expect(dataOfMockCall(onChange, 3)).toEqual({
-        fuga: "piyo",
-        piyo: "foo",
-      });
-      expect(dataOfMockCall(onChange, 4)).toEqual({
-        fuga: "piyo",
-      });
     });
 
     it("should create signal for object with watching deep changes", async () => {
@@ -215,16 +318,17 @@ describe("sigform", () => {
         onChange(clone(obj.value));
       });
 
-      obj.value = { hoge: { fuga: "piyo" } };
-      obj.value.hoge.fuga = "foo";
+      mutate(obj.value, (obj) => {
+        obj = { hoge: { fuga: "piyo" } };
+        obj.hoge.fuga = "foo";
+        delete obj.hoge.fuga;
+        return obj;
+      });
 
-      // delete obj.value.hoge.fuga;
-
-      expect(onChange).toHaveBeenCalledTimes(3);
+      expect(onChange).toHaveBeenCalledTimes(2);
 
       expect(dataOfMockCall(onChange, 1)).toEqual({});
-      expect(dataOfMockCall(onChange, 2)).toEqual({ hoge: { fuga: "piyo" } });
-      expect(dataOfMockCall(onChange, 3)).toEqual({ hoge: { fuga: "foo" } });
+      expect(dataOfMockCall(onChange, 2)).toEqual({ hoge: {} });
     });
   });
 });

@@ -5,7 +5,8 @@ import invariant from "tiny-invariant";
 export const clone = rfdc();
 
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#isObject)
-export const isObject = (a: any) => a instanceof Object;
+export const isObject = (a: any) =>
+  a instanceof Object && !(a instanceof Function);
 
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#get)
 export const get = (obj: Record<string, any>, path: string, defValue?: any) => {

@@ -1,4 +1,5 @@
 import { SigFormData, SigFormField } from "../context";
+import { isProxy } from "../deepSignal";
 import { unflatten } from "./index";
 import { get } from "./lodash";
 import invariant from "tiny-invariant";

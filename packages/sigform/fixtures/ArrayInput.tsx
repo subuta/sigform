@@ -1,4 +1,4 @@
-import { sigfield } from "../src";
+import { mutate, sigfield } from "../src";
 import { TextInput } from "./TextInput";
 import React from "react";
 
@@ -9,19 +9,29 @@ type Data = {
 export const ArrayInput = sigfield<{}, Data[]>((props, ref) => {
   const { field } = props;
 
-  // console.log(field.value);
+  const array = field.value;
 
   return (
     <div className="p-4 bg-blue-400" ref={ref}>
-      {field.value.map((data, i) => {
+      {array.map((data, i) => {
         return (
           <React.Fragment key={data.id}>
-            <TextInput name={`${i}.value`} defaultValue={data.value} />
+            <TextInput.Raw
+              testId={`input:${data.id}`}
+              onChange={(value) => {
+                mutate(data, (draft) => {
+                  draft.value = value;
+                });
+              }}
+              value={data.value}
+            />
             <button
               type="button"
-              id={`${i}-remove`}
+              data-testId={`remove:${data.id}`}
               onClick={() => {
-                field.value = field.value.filter((str) => str !== data);
+                mutate(array, (draft) => {
+                  return draft.filter((d) => d.id !== data.id);
+                });
               }}
             >
               remove

@@ -3,4 +3,4 @@ const nextConfig = {
   transpilePackages: ["sigform"],
 };
 
-module.exports = nextConfig;
+export default nextConfig;

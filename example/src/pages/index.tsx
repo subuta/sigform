@@ -1,16 +1,14 @@
 import { TodoApp } from "@/components/TodoApp";
-import { useSignal } from "@preact/signals-react";
 import cx from "classnames";
-import React, { useEffect, useId, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { SigForm } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";
 
 export default function Index() {
   // For preventing hydration(SSR) issue.
-  const initialTaskId = useId();
   const initialTodos = useMemo(() => {
-    return [{ id: initialTaskId, task: "buy egg" }];
+    return [{ id: 1, task: "buy egg" }];
   }, []);
 
   return (
@@ -26,7 +24,7 @@ export default function Index() {
           // Form level validation example.
           if (specialCommand === "invalid") {
             helpers.setFormErrors({
-              todos: [{ task: "some error" }],
+              todos: ["some error"],
             });
             return;
           }
@@ -43,7 +41,17 @@ export default function Index() {
           console.log("save!", JSON.stringify(value, null, 2));
         }}
       >
+        {/* For usage with form */}
         <TodoApp name="todos" defaultValue={initialTodos} />
+        {/*
+        // Or use "Raw" component.
+        <TodoApp.Raw
+          onChange={(todos) => {
+            console.log(JSON.stringify(todos, null, 2));
+          }}
+          value={initialTodos}
+        />
+        */}
 
         <button
           className={cx(

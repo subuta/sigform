@@ -1,5 +1,15 @@
-import { flatten, getFormData, isObject, set, sortFields } from "./util";
-import { Signal, useSignal } from "@preact/signals-react";
+import { isProxy, mutate } from "./deepSignal";
+import {
+  clone,
+  flatten,
+  getFormData,
+  isObject,
+  set,
+  sortFields,
+  unflatten,
+} from "./util";
+import { Signal, untracked, useSignal } from "@preact/signals-react";
+import { produce, produceWithPatches } from "immer";
 import { useCallback, useId, useRef, useState } from "react";
 import isEqual from "react-fast-compare";
 import { createContainer } from "unstated-next";
@@ -89,11 +99,22 @@ export const useSigform = () => {
   const updateDeepSignal = useCallback(
     (parent: Signal<any>, key: string, signal: Signal<any>) => {
       if (Array.isArray(parent.value)) {
-        const temp = [...parent.value];
-        set(temp, key, signal.value);
-        parent.value = temp;
+        const [next, patches] = produceWithPatches(parent.value, (draft) => {
+          set(draft, key, signal.value);
+        });
+        if (patches.length > 0) {
+          parent.value = next;
+        }
       } else if (isObject(parent.value)) {
-        parent.value = { ...parent.value, [key]: signal.value };
+        const [next, patches] = produceWithPatches(
+          parent.value,
+          (draft: any) => {
+            draft[key] = signal.value;
+          },
+        ) as any;
+        if (patches.length > 0) {
+          parent.value = next;
+        }
       } else {
         parent.value = signal.value;
       }
@@ -138,9 +159,11 @@ export const useSigform = () => {
   const setFormErrors = useCallback(
     (formErrors: Record<string, any>, prefix = formId) => {
       setErrorsIfChanged(
-        flatten({
-          [prefix]: formErrors,
-        }),
+        unflatten(
+          flatten({
+            [prefix]: formErrors,
+          }),
+        ),
       );
     },
     [],

@@ -1,8 +1,8 @@
 import { sigfield } from "../src";
 import React from "react";
 
-export const TextInput = sigfield<{}, string>((props, ref) => {
-  const { name, field } = props;
+export const TextInput = sigfield<{ testId?: string }, string>((props, ref) => {
+  const { name, field, testId } = props;
 
   // console.log(name, field.value);
 
@@ -11,6 +11,7 @@ export const TextInput = sigfield<{}, string>((props, ref) => {
       <input
         name={name}
         type="text"
+        data-testid={testId}
         onChange={(e) => (field.value = e.target.value)}
         value={field.value}
       />

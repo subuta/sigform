@@ -2,7 +2,14 @@ import { nextTick } from "../util";
 import { SigForm } from "@/..";
 import { jest } from "@jest/globals";
 import "@testing-library/jest-dom";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import {
+  findByTestId,
+  fireEvent,
+  getByTestId,
+  queryByTestId,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { ArrayInput } from "fixtures/ArrayInput";
 import { ObjectInput } from "fixtures/ObjectInput";
 import { TextInput } from "fixtures/TextInput";
@@ -55,7 +62,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      const input = container.querySelector(`input[name="0.value"]`);
+      const input = getByTestId(container, "input:1");
 
       expect(input).toHaveValue("hoge");
     });
@@ -120,8 +127,7 @@ describe("sigform", () => {
 
       await waitNextTick();
 
-      let firstInput = container.querySelector(`input[name="0.value"]`);
-      invariant(firstInput, "must exists");
+      let firstInput = getByTestId(container, "input:1");
 
       const form = container.querySelector(`form`);
       invariant(form, "must exists");
@@ -155,22 +161,20 @@ describe("sigform", () => {
         ],
       });
 
-      const removeButton = container.querySelector("#0-remove");
-      invariant(removeButton, "must exists");
+      const removeButton = getByTestId(container, "remove:1");
 
       // Second input must be removed.
-      let secondInput = container.querySelector(`input[name="1.value"]`);
+      let secondInput = getByTestId(container, "input:2");
       expect(secondInput).not.toBeNull();
 
       fireEvent.click(removeButton);
 
-      firstInput = container.querySelector(`input[name="0.value"]`);
+      firstInput = getByTestId(container, "input:2");
       invariant(firstInput, "must exists");
       expect(firstInput).toHaveValue("world");
 
       // Second input must be removed.
-      secondInput = container.querySelector(`input[name="1.value"]`);
-      expect(secondInput).toBeNull();
+      expect(queryByTestId(container, "input:1")).toBeNull();
 
       // Array data must be in sync.
       expect(onChange).toHaveBeenCalledTimes(3);
