@@ -1,6 +1,4 @@
-import { isProxy, mutate } from "./deepSignal";
 import {
-  clone,
   flatten,
   getFormData,
   isObject,
@@ -8,9 +6,10 @@ import {
   sortFields,
   unflatten,
 } from "./util";
-import { Signal, untracked, useSignal } from "@preact/signals-react";
-import { produce, produceWithPatches } from "immer";
-import { useCallback, useId, useRef, useState } from "react";
+import { Signal, useSignal } from "@preact/signals-react";
+import debounce from "debounce-fn";
+import { produceWithPatches } from "immer";
+import { useCallback, useId, useState } from "react";
 import isEqual from "react-fast-compare";
 import { createContainer } from "unstated-next";
 
@@ -151,10 +150,14 @@ export const useSigform = () => {
     return getFormData(fields.value, name);
   }, []);
 
-  const setErrorsIfChanged = (nextErrors: SigFormErrors) => {
-    if (isEqual(nextErrors, errors)) return;
-    setErrors(nextErrors);
-  };
+  // Debounce setErrors for preventing flicker on `clearFormErrors & setFormErrors` call in same tick.
+  const setErrorsIfChanged = useCallback(
+    debounce((nextErrors: SigFormErrors) => {
+      if (isEqual(nextErrors, errors)) return;
+      setErrors(nextErrors);
+    }),
+    [errors],
+  );
 
   const setFormErrors = useCallback(
     (formErrors: Record<string, any>, prefix = formId) => {

@@ -120,11 +120,21 @@ describe("TodoApp", () => {
 
     fireEvent.click(appendButton);
 
-    expect(onChange).toHaveBeenCalledTimes(4);
     expect(dataOfMockCall(onChange, 4)).toEqual({
       todos: [
         { id: 1, task: "buy egg" },
         { id: 2, task: "hello" },
+        { id: 3, task: "" },
+      ],
+    });
+
+    fireEvent.change(input, { target: { value: "world" } });
+
+    expect(onChange).toHaveBeenCalledTimes(5);
+    expect(dataOfMockCall(onChange, 5)).toEqual({
+      todos: [
+        { id: 1, task: "buy egg" },
+        { id: 2, task: "world" },
         { id: 3, task: "" },
       ],
     });
@@ -203,6 +213,9 @@ describe("TodoApp", () => {
     input = getByTestId(container, "input:1");
     fireEvent.change(input, { target: { value: "invalid" } });
     expect(input).toHaveValue("invalid");
+
+    // Needs to wait here because setFormErrors is debounced.
+    await waitNextTick();
 
     expect(dataOfMockCall(onChange, 1)).toEqual({
       todos: [{ id: 1, task: "buy egg" }],

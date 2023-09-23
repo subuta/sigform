@@ -94,7 +94,7 @@ const wrapParent = <T extends object, P>(value: T, meta: Meta<T, P>): T => {
 // Mutate signal value using "immer" style callback.
 export const mutate = <Base, D = Draft<Base>>(
   base: Base,
-  recipe: Producer<D>,
+  recipe: (data: Draft<Base>) => any,
   listener?: PatchListener,
 ) => {
   // Get meta from "base"
@@ -111,7 +111,7 @@ export const mutate = <Base, D = Draft<Base>>(
     "Root not found, It's likely 'sigform' bug, Please submit GH issue with details.",
   );
 
-  const [next, patches] = produceWithPatches(m.value, recipe as any, listener);
+  const [next, patches] = produceWithPatches(m.value, recipe, listener);
 
   if (patches.length > 0 && m) {
     if (m.parent) {
@@ -141,7 +141,7 @@ export const deepSignal = <T extends object>(
     const m = meta(value) || {};
     const onChange = (next: T) => {
       // Propagate nested changes to 'signal'.
-      signal.value = wrapParent(next, { ...m, value: next, onChange });
+      signal.value = next;
     };
 
     signal.value = wrapParent(signal.value as T, {
@@ -162,6 +162,7 @@ export const deepSignal = <T extends object>(
       ): boolean {
         if (p.toString() === "value") {
           // Always wrap new "value" by proxy.
+          const m = meta(newValue) || {};
           newValue = wrapParent(newValue, { ...m, value: newValue, onChange });
         }
         return Reflect.set(target, p, newValue, receiver);

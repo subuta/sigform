@@ -1,6 +1,6 @@
 {
   "name": "sigform",
-  "version": "0.10.18",
+  "version": "0.10.19",
   "description": "Nestable react form UI with Signals",
   "type": "module",
   "main": "./src/index.ts",
@@ -24,6 +24,7 @@
   "dependencies": {
     "@lukeed/uuid": "^2.0.1",
     "@types/flat": "^5.0.2",
+    "debounce-fn": "^5.1.2",
     "flat": "^5.0.2",
     "immer": "^10.0.2",
     "react-fast-compare": "^3.2.2",

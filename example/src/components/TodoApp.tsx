@@ -97,7 +97,7 @@ export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
   useEffect(() => {
     const todos = field.value;
     if (todos[0] && todos[0].task === "hoge") {
-      untracked(() => helpers.setFieldError(["fuga"]));
+      helpers.setFieldError(["fuga"]);
     }
   }, [todos]);
 

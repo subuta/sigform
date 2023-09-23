@@ -68,6 +68,7 @@ export type sigfieldHelpers = {
   clearFormErrors: () => void;
   setFieldError: (formErrors: any) => void;
   setFieldValue: (rawData: any) => void;
+  setFormValues: (rawData: any) => void;
 };
 
 export type RawFieldProps<P, T> = P & {
@@ -172,6 +173,7 @@ export const sigfield = <P = any, T = any, E = string>(
 
     const helpers: sigfieldHelpers = {
       clearFormErrors: ctx.clearFormErrors,
+      setFormValues: ctx.setFormValues,
       setFieldError,
       setFieldValue,
     };
