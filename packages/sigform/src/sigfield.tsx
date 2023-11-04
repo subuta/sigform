@@ -222,6 +222,8 @@ export const sigfield = <P = any, T = any, E = string>(
     // Subscribe field change
     useSignalEffect(() => {
       if (field.value === undefined) return;
+      // Ignore if no changes.
+      if (props.value === field.value) return;
 
       onChange && onChange(field.value);
     });
