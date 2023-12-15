@@ -1,16 +1,11 @@
 import { TodoApp } from "@/components/TodoApp";
 import cx from "classnames";
-import React, { useMemo } from "react";
+import React from "react";
 import { SigForm } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";
 
 export default function Index() {
-  // For preventing hydration(SSR) issue.
-  const initialTodos = useMemo(() => {
-    return [{ id: 1, task: "buy egg" }];
-  }, []);
-
   return (
     <div>
       <SigForm
@@ -42,7 +37,7 @@ export default function Index() {
         }}
       >
         {/* For usage with form */}
-        <TodoApp name="todos" defaultValue={initialTodos} />
+        <TodoApp name="todos" defaultValue={[{ id: 1, task: "buy egg" }]} />
         {/*
         // Or use "Raw" component.
         <TodoApp.Raw

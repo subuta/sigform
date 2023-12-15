@@ -1,19 +1,19 @@
+import { CheckboxInput } from "../../fixtures/CheckboxInput";
+import { TextInput } from "../../fixtures/TextInput";
+import { SigForm } from "../sigform";
 import { nextTick } from "../util";
-import { SigForm } from "@/..";
 import { jest } from "@jest/globals";
 import "@testing-library/jest-dom";
 import {
-  findByTestId,
   fireEvent,
   getByTestId,
   queryByTestId,
   render,
   waitFor,
 } from "@testing-library/react";
-import { ArrayInput } from "fixtures/ArrayInput";
-import { ObjectInput } from "fixtures/ObjectInput";
-import { TextInput } from "fixtures/TextInput";
 import React from "react";
+import { ArrayInput } from "sigform/fixtures/ArrayInput";
+import { ObjectInput } from "sigform/fixtures/ObjectInput";
 import invariant from "tiny-invariant";
 
 const waitNextTick = () => waitFor(() => nextTick());
@@ -24,12 +24,17 @@ const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   return args[0];
 };
 
+const allDataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
+  if (!fn) return null;
+  return fn.mock.calls[nth - 1];
+};
+
 describe("sigform", () => {
   describe("defaultValue", () => {
     it("should handle defaultValue", async () => {
       const { container } = render(
         <SigForm>
-          <TextInput name="text" defaultValue="hello" />
+          <TextInput name="text" defaultValue="hello" />,
         </SigForm>,
       );
 
@@ -40,7 +45,21 @@ describe("sigform", () => {
       expect(input).toHaveValue("hello");
     });
 
-    it("should handle object defaultValue", () => {
+    it("should handle boolean defaultValue", async () => {
+      const { container } = render(
+        <SigForm>
+          <CheckboxInput name="bool" defaultValue={true} />,
+        </SigForm>,
+      );
+
+      await waitNextTick();
+
+      const input = container.querySelector(`input[name="bool"]`);
+
+      expect(input).toBeChecked();
+    });
+
+    it("should handle object defaultValue", async () => {
       const { container } = render(
         <SigForm>
           <ObjectInput name="obj" defaultValue={{ propA: "world" }} />
@@ -91,23 +110,94 @@ describe("sigform", () => {
 
       const input = container.querySelector(`input[name="text"]`);
       invariant(input, "must exists");
+      expect(input).toHaveValue("hello");
 
       const form = container.querySelector(`form`);
       invariant(form, "must exists");
 
+      fireEvent.change(input, { target: { value: "world" } });
+      expect(input).toHaveValue("world");
+
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(dataOfMockCall(onChange, 1)).toEqual({ text: "hello" });
+      expect(dataOfMockCall(onChange, 1)).toEqual({ text: "world" });
+    });
+
+    it("should handle boolean defaultValue", async () => {
+      const { container } = render(
+        <CheckboxInput.Raw testId="bool" defaultValue={true} />,
+      );
+
+      await waitNextTick();
+
+      const input = getByTestId(container, "bool");
+
+      expect(input).toBeChecked();
+      invariant(input, "must exists");
+
+      fireEvent.click(input);
+      expect(input).not.toBeChecked();
+    });
+
+    it("should handle boolean defaultValue", async () => {
+      const { container } = render(
+        <SigForm>
+          <CheckboxInput name="bool" defaultValue={false} />,
+        </SigForm>,
+      );
+
+      await waitNextTick();
+
+      const input = container.querySelector(`input[name="bool"]`);
+
+      expect(input).not.toBeChecked();
+      invariant(input, "must exists");
+
+      fireEvent.click(input);
+      expect(input).toBeChecked();
+    });
+
+    it("should handle Raw", async () => {
+      const { container } = render(
+        <TextInput.Raw
+          testId="input"
+          onChange={onChange}
+          defaultValue="hello"
+        />,
+      );
+
+      await waitNextTick();
+
+      const input = getByTestId(container, "input");
+      invariant(input, "must exists");
 
       fireEvent.change(input, { target: { value: "world" } });
       expect(input).toHaveValue("world");
 
-      expect(onChange).toHaveBeenCalledTimes(2);
-      expect(dataOfMockCall(onChange, 2)).toEqual({ text: "world" });
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(allDataOfMockCall(onChange, 1)).toEqual([
+        "world",
+        [{ op: "replace", path: [], value: "world" }],
+      ]);
+    });
 
-      fireEvent.submit(form);
+    it("should handle Raw with name", async () => {
+      const { container } = render(
+        <TextInput.Raw name="text" onChange={onChange} defaultValue="hello" />,
+      );
 
-      expect(onSubmit).toHaveBeenCalledTimes(1);
-      expect(dataOfMockCall(onSubmit, 1)).toEqual({ text: "world" });
+      await waitNextTick();
+
+      const input = container.querySelector(`input[name="text"]`);
+      invariant(input, "must exists");
+
+      fireEvent.change(input, { target: { value: "world" } });
+      expect(input).toHaveValue("world");
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(allDataOfMockCall(onChange, 1)).toEqual([
+        "world",
+        [{ op: "replace", path: ["text"], value: "world" }],
+      ]);
     });
 
     it("should handle array input", async () => {
@@ -132,19 +222,13 @@ describe("sigform", () => {
       const form = container.querySelector(`form`);
       invariant(form, "must exists");
 
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(dataOfMockCall(onChange, 1)).toEqual({
-        array: [
-          { id: "1", value: "hello" },
-          { id: "2", value: "world" },
-        ],
-      });
+      expect(onChange).toHaveBeenCalledTimes(0);
 
       fireEvent.change(firstInput, { target: { value: "goodbye" } });
       expect(firstInput).toHaveValue("goodbye");
 
-      expect(onChange).toHaveBeenCalledTimes(2);
-      expect(dataOfMockCall(onChange, 2)).toEqual({
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(dataOfMockCall(onChange, 1)).toEqual({
         array: [
           { id: "1", value: "goodbye" },
           { id: "2", value: "world" },
@@ -177,8 +261,8 @@ describe("sigform", () => {
       expect(queryByTestId(container, "input:1")).toBeNull();
 
       // Array data must be in sync.
-      expect(onChange).toHaveBeenCalledTimes(3);
-      expect(dataOfMockCall(onChange, 3)).toEqual({
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(dataOfMockCall(onChange, 2)).toEqual({
         array: [{ id: "2", value: "world" }],
       });
 
@@ -207,14 +291,15 @@ describe("sigform", () => {
       const form = container.querySelector(`form`);
       invariant(form, "must exists");
 
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(dataOfMockCall(onChange, 1)).toEqual({ obj: { propA: "hello" } });
+      expect(onChange).toHaveBeenCalledTimes(0);
 
       fireEvent.change(input, { target: { value: "world" } });
+      expect(onChange).toHaveBeenCalledTimes(1);
+
       expect(input).toHaveValue("world");
 
-      expect(onChange).toHaveBeenCalledTimes(2);
-      expect(dataOfMockCall(onChange, 2)).toEqual({ obj: { propA: "world" } });
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(dataOfMockCall(onChange, 1)).toEqual({ obj: { propA: "world" } });
 
       fireEvent.submit(form);
 

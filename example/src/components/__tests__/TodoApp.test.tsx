@@ -7,7 +7,7 @@ import {
   render,
   waitFor,
 } from "@testing-library/react";
-import React from "react";
+import React, { useState } from "react";
 import { SigForm } from "sigform";
 
 const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
@@ -51,26 +51,23 @@ describe("TodoApp", () => {
 
     fireEvent.change(input, { target: { value: "world" } });
 
-    expect(onChange).toHaveBeenCalledTimes(6);
-    expect(dataOfMockCall(onChange, 1)).toEqual({
-      todos: [{ id: 1, task: "buy egg" }],
-    });
+    expect(onChange).toHaveBeenCalledTimes(5);
 
-    expect(dataOfMockCall(onChange, 2)).toEqual({ todos: [] });
-    expect(dataOfMockCall(onChange, 3)).toEqual({
+    expect(dataOfMockCall(onChange, 1)).toEqual({ todos: [] });
+    expect(dataOfMockCall(onChange, 2)).toEqual({
       todos: [{ id: 1, task: "" }],
     });
-    expect(dataOfMockCall(onChange, 4)).toEqual({
+    expect(dataOfMockCall(onChange, 3)).toEqual({
       todos: [{ id: 1, task: "hello" }],
     });
-    expect(dataOfMockCall(onChange, 5)).toEqual({
+    expect(dataOfMockCall(onChange, 4)).toEqual({
       todos: [
         { id: 1, task: "hello" },
         { id: 2, task: "" },
       ],
     });
 
-    expect(dataOfMockCall(onChange, 6)).toEqual({
+    expect(dataOfMockCall(onChange, 5)).toEqual({
       todos: [
         { id: 1, task: "world" },
         { id: 2, task: "" },
@@ -92,14 +89,10 @@ describe("TodoApp", () => {
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
 
-    expect(dataOfMockCall(onChange, 1)).toEqual({
-      todos: [{ id: 1, task: "buy egg" }],
-    });
-
     const appendButton = getByTestId(container, "button:append");
     fireEvent.click(appendButton);
 
-    expect(dataOfMockCall(onChange, 2)).toEqual({
+    expect(dataOfMockCall(onChange, 1)).toEqual({
       todos: [
         { id: 1, task: "buy egg" },
         { id: 2, task: "" },
@@ -111,7 +104,7 @@ describe("TodoApp", () => {
 
     fireEvent.change(input, { target: { value: "hello" } });
 
-    expect(dataOfMockCall(onChange, 3)).toEqual({
+    expect(dataOfMockCall(onChange, 2)).toEqual({
       todos: [
         { id: 1, task: "buy egg" },
         { id: 2, task: "hello" },
@@ -120,7 +113,7 @@ describe("TodoApp", () => {
 
     fireEvent.click(appendButton);
 
-    expect(dataOfMockCall(onChange, 4)).toEqual({
+    expect(dataOfMockCall(onChange, 3)).toEqual({
       todos: [
         { id: 1, task: "buy egg" },
         { id: 2, task: "hello" },
@@ -130,8 +123,8 @@ describe("TodoApp", () => {
 
     fireEvent.change(input, { target: { value: "world" } });
 
-    expect(onChange).toHaveBeenCalledTimes(5);
-    expect(dataOfMockCall(onChange, 5)).toEqual({
+    expect(onChange).toHaveBeenCalledTimes(4);
+    expect(dataOfMockCall(onChange, 4)).toEqual({
       todos: [
         { id: 1, task: "buy egg" },
         { id: 2, task: "world" },
@@ -143,21 +136,31 @@ describe("TodoApp", () => {
   it("should handle complex remove + add combination with Raw component", async () => {
     const onChange = jest.fn();
 
-    const { container } = render(
-      <TodoApp.Raw onChange={onChange} value={[{ id: 1, task: "buy egg" }]} />,
-    );
+    const TestApp = () => {
+      const [todos, setTodos] = useState([{ id: 1, task: "buy egg" }]);
+
+      return (
+        <TodoApp.Raw
+          onChange={(...args) => {
+            onChange(...args);
+            setTodos(args[0]);
+          }}
+          value={todos}
+        />
+      );
+    };
+
+    const { container } = render(<TestApp />);
 
     await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
 
-    expect(dataOfMockCall(onChange, 1)).toEqual([{ id: 1, task: "buy egg" }]);
-
     const appendButton = getByTestId(container, "button:append");
     fireEvent.click(appendButton);
 
-    expect(dataOfMockCall(onChange, 2)).toEqual([
+    expect(dataOfMockCall(onChange, 1)).toEqual([
       { id: 1, task: "buy egg" },
       { id: 2, task: "" },
     ]);
@@ -167,21 +170,22 @@ describe("TodoApp", () => {
 
     fireEvent.change(input, { target: { value: "hello" } });
 
-    expect(dataOfMockCall(onChange, 3)).toEqual([
+    expect(dataOfMockCall(onChange, 2)).toEqual([
       { id: 1, task: "buy egg" },
       { id: 2, task: "hello" },
     ]);
 
     fireEvent.click(appendButton);
 
-    expect(onChange).toHaveBeenCalledTimes(4);
-    expect(dataOfMockCall(onChange, 4)).toEqual([
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(dataOfMockCall(onChange, 3)).toEqual([
       { id: 1, task: "buy egg" },
       { id: 2, task: "hello" },
       { id: 3, task: "" },
     ]);
   });
 
+  // TODO: Implement formHelper.
   it("should work with form error", async () => {
     const onChange = jest.fn();
 
@@ -206,10 +210,6 @@ describe("TodoApp", () => {
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
 
-    expect(dataOfMockCall(onChange, 1)).toEqual({
-      todos: [{ id: 1, task: "buy egg" }],
-    });
-
     input = getByTestId(container, "input:1");
     fireEvent.change(input, { target: { value: "invalid" } });
     expect(input).toHaveValue("invalid");
@@ -218,15 +218,11 @@ describe("TodoApp", () => {
     await waitNextTick();
 
     expect(dataOfMockCall(onChange, 1)).toEqual({
-      todos: [{ id: 1, task: "buy egg" }],
-    });
-
-    expect(dataOfMockCall(onChange, 2)).toEqual({
       todos: [{ id: 1, task: "invalid" }],
     });
     const error = getByTestId(container, "input:1:error");
     expect(error.innerText).toEqual("some error");
 
-    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

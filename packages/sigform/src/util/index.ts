@@ -2,6 +2,7 @@ import * as flat from "flat";
 
 export * from "./lodash";
 export * from "./sigform";
+export * from "./immer";
 
 // @ts-ignore
 export const flatten = flat.default.flatten;

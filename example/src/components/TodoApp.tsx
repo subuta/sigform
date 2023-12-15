@@ -1,8 +1,7 @@
-import { untracked } from "@preact/signals-react";
 import cx from "classnames";
 import _ from "lodash";
 import React, { useEffect } from "react";
-import { mutate, sigfield } from "sigform";
+import { sigfield } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";
 
@@ -11,7 +10,7 @@ export const TextInput = sigfield<
   { className?: string; testId?: string },
   string
 >((props, ref) => {
-  const { className, field, error } = props;
+  const { className, value, mutate, error } = props;
 
   return (
     <div className={cx("relative", error && "pb-6")}>
@@ -24,10 +23,8 @@ export const TextInput = sigfield<
         type="text"
         data-testid={props.testId || ""}
         ref={ref}
-        onChange={(e) => {
-          field.value = e.target.value;
-        }}
-        value={field.value}
+        onChange={(e) => mutate(() => e.target.value)}
+        value={value}
       />
 
       {error && (
@@ -52,34 +49,34 @@ const TodoInput = sigfield<
   { className?: string; onRemove: (todo: Todo) => void },
   Todo
 >((props, ref) => {
-  const { className = "", onRemove, field, error } = props;
+  const { className = "", onRemove, value, mutate, error } = props;
 
-  const todo = field.value;
+  const todo = value;
 
   return (
     <div className={cx(className, "flex items-start")} ref={ref}>
       <TextInput.Raw
         onChange={(task) => {
-          mutate(todo, (draft) => {
+          mutate((draft) => {
             draft.task = task;
           });
         }}
         error={error}
         value={todo.task}
-        testId={`input:${field.value.id}`}
+        testId={`input:${todo.id}`}
       />
 
       <div className="ml-2 h-[34px] flex items-center">
         <button
           type="button"
-          data-testid={`button:${field.value.id}:remove`}
+          data-testid={`button:${todo.id}:remove`}
           className="flex items-center text-xl text-gray-400 "
-          onClick={() => onRemove(field.value)}
+          onClick={() => onRemove(todo)}
         >
           <i className="material-symbols-outlined">close</i>
         </button>
         <span className="ml-2 text-xs text-gray-400 font-bold">
-          ID: {field.value.id}
+          ID: {todo.id}
         </span>
       </div>
     </div>
@@ -88,14 +85,13 @@ const TodoInput = sigfield<
 
 // Input field for TODO array type.
 export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
-  let { field, helpers, error } = props;
+  let { value, helpers, mutate, error } = props;
 
-  const todos = field.value;
+  const todos = value;
   const isEmpty = todos.length === 0;
 
   // Field level validation example.
   useEffect(() => {
-    const todos = field.value;
     if (todos[0] && todos[0].task === "hoge") {
       helpers.setFieldError(["fuga"]);
     }
@@ -114,9 +110,14 @@ export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
               error={props.error && props.error[i]}
               className={isLast ? "" : "mb-4"}
               key={todo.id}
+              onChange={(todo) => {
+                mutate((draft) => {
+                  draft[i] = todo;
+                });
+              }}
               value={todo}
               onRemove={({ id }) => {
-                mutate(todos, (draft) => {
+                mutate((draft) => {
                   return draft.filter((t) => t.id !== todo.id);
                 });
               }}
@@ -131,7 +132,7 @@ export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
         className={cx(buttonClass, "mt-4 bg-white")}
         onClick={() => {
           const nextId = (_.max(_.map(todos, "id")) || 0) + 1;
-          mutate(todos, (draft) => {
+          mutate((draft) => {
             draft.push({ id: nextId, task: "" });
           });
         }}

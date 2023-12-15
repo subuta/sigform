@@ -1,154 +1,120 @@
-import {
-  flatten,
-  getFormData,
-  isObject,
-  set,
-  sortFields,
-  unflatten,
-} from "./util";
-import { Signal, useSignal } from "@preact/signals-react";
+import { clone, flatten, get, set, unflatten, wrapPatches } from "./util";
 import debounce from "debounce-fn";
-import { produceWithPatches } from "immer";
-import { useCallback, useId, useState } from "react";
+import { Patch, applyPatches } from "immer";
+import {
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import isEqual from "react-fast-compare";
 import { createContainer } from "unstated-next";
+
+export type SigFormErrors = Record<string, string | undefined>;
 
 export type SigFormField<T> = {
   fieldTree?: string[];
   name: string;
-  value: Signal<T>;
+  onChange?: Dispatch<SetStateAction<T>>;
 };
-
-export type SigFormErrors = Record<string, string | undefined>;
-
-export type SigFormData = Record<string, any>;
 
 export const useSigform = () => {
   const formId = useId();
+  const asData = (data: any) => {
+    return unflatten(
+      flatten({
+        [formId]: data,
+      }),
+    ) as Record<string, any>;
+  };
 
-  const fields = useSignal<SigFormField<any>[]>([]);
+  const [data, setData] = useState<any>(asData(null));
+  const fieldsRef = useRef<SigFormField<any>[]>([]);
   const [errors, setErrors] = useState<SigFormErrors>({});
 
-  const registerField = useCallback(function <T>(
+  const registerField = function <T>(
     fieldTree: string[],
-    value: Signal<T>,
+    value: T | null,
+    onChange?: Dispatch<SetStateAction<T>>,
   ) {
     const name = fieldTree.join(".");
     if (!name) return;
 
-    // console.log("register", name);
-
-    fields.value = [
-      ...fields.value,
-      {
-        fieldTree: fieldTree,
-        name,
-        value,
-      },
-    ];
-    // Sort fields everytime after registration.
-    fields.value = sortFields(fields.value);
-  }, []);
-
-  const unRegisterField = useCallback((fieldName: string) => {
-    if (!fieldName) return;
-
-    // console.log("unregister", fieldName);
-
-    fields.value = fields.value.filter((field) => field.name !== fieldName);
-    // Sort fields everytime after un-registration.
-    fields.value = sortFields(fields.value);
-  }, []);
-
-  const getField = useCallback((fieldName: string) => {
-    return fields.value.find((field) => field.name === fieldName);
-  }, []);
-
-  // Get field's value.
-  const getFieldValue = useCallback((fieldName: string) => {
-    const field = getField(fieldName);
-    return field ? field.value : null;
-  }, []);
-
-  const setFieldValue = useCallback((fieldName: string, value: any) => {
-    const signal = getFieldValue(fieldName);
-
-    if (!signal) {
-      return false;
+    // Apply initial fieldValue.
+    if (data !== null) {
+      const tmp = clone(data);
+      set(tmp, name, value);
+      setData(tmp);
     }
 
-    signal.value = value;
-  }, []);
-
-  const setFormValues = useCallback((rawData: SigFormData, prefix = formId) => {
-    const data = flatten({
-      [prefix]: rawData,
-    }) as Record<string, any>;
-
-    const fieldNames = Object.keys(data);
-    fieldNames.forEach((name) => {
-      const value = data[name];
-      setFieldValue(name, value);
+    fieldsRef.current.push({
+      fieldTree,
+      name,
+      onChange,
     });
+  };
 
-    return true;
-  }, []);
+  const bindForm = function <T>(
+    name: string,
+    defaultValue: T | null,
+    onChange?: Dispatch<SetStateAction<T>>,
+  ) {
+    registerField([name], defaultValue, (data) => {
+      setData(asData(data));
+      onChange && onChange(data);
+    });
+    setData(asData(defaultValue));
+  };
 
-  // Update Array / Object signal by proper way.
-  const updateDeepSignal = useCallback(
-    (parent: Signal<any>, key: string, signal: Signal<any>) => {
-      if (Array.isArray(parent.value)) {
-        const [next, patches] = produceWithPatches(parent.value, (draft) => {
-          set(draft, key, signal.value);
-        });
-        if (patches.length > 0) {
-          parent.value = next;
-        }
-      } else if (isObject(parent.value)) {
-        const [next, patches] = produceWithPatches(
-          parent.value,
-          (draft: any) => {
-            draft[key] = signal.value;
-          },
-        ) as any;
-        if (patches.length > 0) {
-          parent.value = next;
-        }
-      } else {
-        parent.value = signal.value;
+  const unRegisterField = (fieldName: string) => {
+    if (!fieldName) return;
+
+    fieldsRef.current = fieldsRef.current.filter(
+      (field) => field.name !== fieldName,
+    );
+  };
+
+  const getField = (fieldName: string) => {
+    return fieldsRef.current.find((field) => field.name === fieldName);
+  };
+
+  const getFieldValue = (fieldName: string) => get(data as any, fieldName);
+
+  const propagateChange = (fullFieldName: string, patches: Patch[]) => {
+    if (!fullFieldName) return;
+
+    const field = getField(fullFieldName);
+    if (!field) return;
+
+    const names = [...(field.fieldTree as string[])];
+    names.pop();
+
+    // Stop if reached at root.
+    if (names.length === 0) {
+      return;
+    }
+
+    // Do propagate changes to parent if parent field found.
+    const parentName = names.join(".");
+    const parentFieldName = names[names.length - 1];
+    const hasParent = parentFieldName !== formId;
+
+    const parentField = getField(parentName);
+    if (parentField) {
+      const parentValue = getFieldValue(parentName);
+      const nextState = applyPatches(parentValue || {}, patches);
+      parentField.onChange && parentField.onChange(nextState);
+
+      // Propagate changes to in-direct parent.
+      if (hasParent) {
+        wrapPatches(patches, parentFieldName);
+        propagateChange(parentName, patches);
       }
-    },
-    [],
-  );
-
-  const propagateChange = useCallback(
-    (fullFieldName: string, fieldName: string) => {
-      if (!fullFieldName) return;
-
-      const field = getField(fullFieldName);
-      if (!field) return;
-
-      const names = [...(field.fieldTree as string[])];
-      names.pop();
-
-      // Stop if reached at root.
-      if (names.length === 0) {
-        return;
-      }
-
-      // Do propagate changes to parent if parent field found.
-      const parentName = names.join(".");
-      const parentField = getField(parentName);
-      if (parentField) {
-        updateDeepSignal(parentField.value, fieldName, field.value);
-      }
-    },
-    [],
-  );
-
-  const getFormDataMemo = useCallback((name = "") => {
-    return getFormData(fields.value, name);
-  }, []);
+    }
+  };
 
   // Debounce setErrors for preventing flicker on `clearFormErrors & setFormErrors` call in same tick.
   const setErrorsIfChanged = useCallback(
@@ -176,22 +142,43 @@ export const useSigform = () => {
     setFormErrors({});
   }, []);
 
+  const setFormValues = (value: any, prefix = formId) => {
+    setData((data: any) => {
+      return unflatten(
+        flatten({
+          [prefix]: value,
+        }),
+      );
+    });
+  };
+
   return {
     formId,
-    fields,
+    bindForm,
+    data,
     registerField,
-    getField,
     unRegisterField,
     propagateChange,
-    getFormData: getFormDataMemo,
-    errors,
+    getFieldValue,
     setFormErrors,
     clearFormErrors,
     setFormValues,
+    errors,
   };
+};
+
+export type SigFormComponentProps<P> = P & {
+  onChange?: (value: any, helpers: SigFormHelpers) => void;
+  onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
+  defaultValue?: any;
 };
 
 export const SigformContext = createContainer(useSigform);
 export const useSigformContext = SigformContext.useContainer;
 
 export type SigFormContextHelpers = ReturnType<typeof useSigform>;
+
+export type SigFormHelpers = Pick<
+  SigFormContextHelpers,
+  "setFormErrors" | "clearFormErrors" | "setFormValues"
+>;

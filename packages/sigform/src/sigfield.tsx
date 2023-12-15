@@ -1,34 +1,60 @@
 import { useSigformContext } from "./context";
-import { deepSignal, meta } from "./deepSignal";
-import { computeFieldTree, get } from "./util";
-import {
-  Signal,
-  signal as asSignal,
-  untracked,
-  useComputed,
-  useSignal,
-  useSignalEffect,
-} from "@preact/signals-react";
+import { computeFieldTree, get, mutate } from "./util";
+import { Patch, enablePatches } from "immer";
+import { Producer } from "immer/src/types/types-external";
 import React, {
   ForwardRefRenderFunction,
-  createRef,
   forwardRef,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import invariant from "tiny-invariant";
 
-// For debugging.
-const DEBUG = false;
+enablePatches();
+
+export type RawFieldProps<P, T> = P & {
+  value: T;
+  defaultValue?: T;
+};
+
+export type SigfieldHelpers = {
+  clearFormErrors: () => void;
+  setFieldError: (formErrors: any) => void;
+  setFieldValue: (rawData: any) => void;
+  setFormValues: (rawData: any) => void;
+};
+
+export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
+  // Name of field
+  name: string | undefined;
+  // Error of field
+  error?: E;
+  // Field helpers.
+  helpers?: SigfieldHelpers;
+  mutate: (recipe: Producer<T>) => void;
+};
+
+export type OuterSigfieldProps<T> = {
+  // sigfield
+  name?: string | number;
+  defaultValue?: T;
+};
+
+export type OuterRawFieldProps<T, E> = {
+  // Name of field
+  name?: string | number;
+  error?: E;
+  onChange?: (value: T, patches: Patch[]) => void;
+  defaultValue?: T;
+  value?: T;
+};
 
 const useSyncFieldName = (name: string, formId: string) => {
-  const fieldTree = useSignal<string[]>([]);
-  const fullFieldName = useComputed(() => fieldTree.value.join("."));
+  const [fieldTree, setFieldTree] = useState<string[]>([]);
+  const fullFieldName = fieldTree.join(".");
   const ref = useRef<HTMLElement | null>(null);
-
-  const ctx = useSigformContext();
 
   // Sync fieldName to DOM structure.
   useEffect(() => {
@@ -45,17 +71,15 @@ const useSyncFieldName = (name: string, formId: string) => {
   }, [name]);
 
   useEffect(() => {
-    // Re-compute fieldTree on DOM change.
-    ctx.fields.value;
     requestAnimationFrame(() => {
-      // SEE: [reactjs - Typescript: how to declare a type that includes all types extending a common type? - Stack Overflow](https://stackoverflow.com/questions/57201223/typescript-how-to-declare-a-type-that-includes-all-types-extending-a-common-typ)
       const node = ref.current;
       if (node) {
         // return computed fieldTree by walk parentNodes.
-        fieldTree.value = computeFieldTree(node, formId);
+        const fieldTree = computeFieldTree(node, formId);
+        setFieldTree(fieldTree);
       }
     });
-  });
+  }, []);
 
   return {
     fieldTree,
@@ -64,128 +88,69 @@ const useSyncFieldName = (name: string, formId: string) => {
   };
 };
 
-export type sigfieldHelpers = {
-  clearFormErrors: () => void;
-  setFieldError: (formErrors: any) => void;
-  setFieldValue: (rawData: any) => void;
-  setFormValues: (rawData: any) => void;
-};
-
-export type RawFieldProps<P, T> = P & {
-  // Signal instance represents field value.
-  field: Signal<T>;
-};
-
-export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
-  // Name of field
-  name?: string;
-  // Error of field
-  error?: E;
-  // Field helpers.
-  helpers?: sigfieldHelpers;
-};
-
-export type OutersigfieldProps<T> = {
-  // sigfield
-  name?: string | number;
-  defaultValue?: T;
-};
-
-export type OuterRawFieldProps<T, E> = {
-  error?: E;
-  signal?: Signal<T>;
-  onChange?: (value: T) => void;
-  value?: T;
-};
-
 export const sigfield = <P = any, T = any, E = string>(
   RawComponent: ForwardRefRenderFunction<any, SigfieldProps<P, T, E>>,
 ) => {
   // Wrap component in forwardRef.
   const Component = forwardRef(RawComponent);
-
   // Use "sigfield" as default renderer
   const render = (
-    props: Omit<P, "name" | "defaultValue"> & OutersigfieldProps<T>,
+    props: Omit<P, "name" | "defaultValue"> & OuterSigfieldProps<T>,
   ) => {
-    const { defaultValue, ...rest } = props;
-    const name = String(props.name);
+    const { defaultValue, name = null, ...rest } = props;
+    const nameStr = String(name);
 
     const ctx = useSigformContext();
+    const { formId } = ctx;
 
-    // Use provided signal or create own.
-    const field = useMemo(
-      () => deepSignal(defaultValue ?? null) as Signal<T>,
-      [],
-    );
+    const { fieldTree, fullFieldName, ref } = useSyncFieldName(nameStr, formId);
 
-    const { fieldTree, fullFieldName, ref } = useSyncFieldName(
-      name,
-      ctx.formId,
-    );
+    const value =
+      ctx.getFieldValue(fullFieldName) ?? (defaultValue || undefined);
 
     const error = useMemo(() => {
-      return get(ctx.errors, fullFieldName.value);
-    }, [ctx.errors, fullFieldName.value]);
+      return get(ctx.errors, fullFieldName);
+    }, [ctx.errors, fullFieldName]);
 
-    // (re-)register field into context on fullFieldName change.
     useEffect(() => {
-      ctx.registerField(fieldTree.value, field);
+      if (!fullFieldName) {
+        return;
+      }
+      ctx.registerField(fieldTree, defaultValue || null);
       return () => {
-        ctx.unRegisterField(fullFieldName.value);
+        ctx.unRegisterField(fullFieldName);
       };
-    }, [fullFieldName.value]);
+    }, [fullFieldName]);
 
-    // Subscribe field change
-    useSignalEffect(() => {
-      field.value;
-
-      // Propagate change into parent.
-      ctx.propagateChange(fullFieldName.peek(), name);
-    });
-
-    if (DEBUG) {
-      // Track component mount & unmount.
-      useSignalEffect(() => {
-        if (!fullFieldName.value) return;
-
-        console.log(
-          `%c ${fullFieldName.value} mounted`,
-          "background: #222; color: #bada55",
-        );
-
-        return () => {
-          console.log(
-            `%c ${fullFieldName.value} unmounted`,
-            "background: #222; color: #bada55",
-          );
-        };
-      });
-    }
-
-    const setFieldError = useCallback((formErrors: any) => {
-      ctx.setFormErrors(formErrors, fullFieldName.peek());
-    }, []);
-
-    const setFieldValue = useCallback((rawData: any) => {
-      ctx.setFormValues(rawData, fullFieldName.peek());
-    }, []);
-
-    const helpers: sigfieldHelpers = {
-      clearFormErrors: ctx.clearFormErrors,
-      setFormValues: ctx.setFormValues,
-      setFieldError,
-      setFieldValue,
+    const setFieldError = (formErrors: any) => {
+      ctx.setFormErrors(formErrors, fullFieldName);
     };
+
+    const setFieldValue = (rawData: any) => {
+      ctx.setFormValues(rawData, fullFieldName);
+    };
+
+    const helpers: SigfieldHelpers = useMemo(() => {
+      return {
+        clearFormErrors: ctx.clearFormErrors,
+        setFormValues: ctx.setFormValues,
+        setFieldError,
+        setFieldValue,
+      };
+    }, [ctx.data, ctx.errors]);
 
     return (
       <Component
         {...(rest as any)}
-        name={name}
-        field={field}
-        ref={ref}
-        error={error}
+        name={name ? String(name) : undefined}
+        mutate={(recipe: Producer<T>) => {
+          const [_, patches] = mutate(value as any, recipe, name);
+          ctx.propagateChange(fullFieldName, patches);
+        }}
         helpers={helpers}
+        error={error}
+        value={value}
+        ref={ref}
       />
     );
   };
@@ -194,41 +159,25 @@ export const sigfield = <P = any, T = any, E = string>(
   render.Raw = (
     props: Omit<P, "onChange" | "value"> & OuterRawFieldProps<T, E>,
   ) => {
-    const { value, onChange, signal, ...rest } = props;
+    const { name, defaultValue, value, onChange, error, ...rest } = props;
 
-    const emptyValue = value === undefined;
-
-    if (signal && value) {
-      invariant(
-        false,
-        `Not allowed to pass 'signal' and 'value & onChange' same time.`,
-      );
-    } else if (!signal && emptyValue) {
-      invariant(false, `Must have 'signal' or 'value & onChange' props`);
-    }
-
-    // Use provided signal or create own.
-    const field = useMemo(
-      () => signal ?? (deepSignal(value ?? (undefined as any)) as Signal<T>),
-      [],
+    return (
+      <Component
+        {...(rest as any)}
+        name={name ? String(name) : undefined}
+        mutate={(recipe: Producer<T>) => {
+          const [nextState, patches] = mutate(
+            value ?? defaultValue ?? undefined,
+            recipe,
+            name,
+          );
+          onChange && onChange(nextState, patches);
+        }}
+        error={error}
+        value={value}
+        defaultValue={defaultValue}
+      />
     );
-
-    // Apply outside value changes
-    useEffect(() => {
-      if (props.value === undefined) return;
-      field.value = props.value;
-    }, [props.value]);
-
-    // Subscribe field change
-    useSignalEffect(() => {
-      if (field.value === undefined) return;
-      // Ignore if no changes.
-      if (props.value === field.value) return;
-
-      onChange && onChange(field.value);
-    });
-
-    return <Component {...(rest as any)} field={field} />;
   };
 
   return render;

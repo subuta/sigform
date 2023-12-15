@@ -1,34 +1,18 @@
 import {
-  SigFormContextHelpers,
+  SigFormComponentProps,
   SigformContext,
   useSigformContext,
 } from "./context";
-import { deepSignal } from "./deepSignal";
 import { clone } from "./util";
-import { signal } from "@preact/signals-core";
-import {
-  Signal,
-  effect,
-  untracked,
-  useComputed,
-  useSignalEffect,
-} from "@preact/signals-react";
 import React, {
   ComponentType,
-  FormEvent,
   ReactNode,
   forwardRef,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
 } from "react";
-import isEqual from "react-fast-compare";
 import invariant from "tiny-invariant";
-
-type ChildrenProps = {
-  children: ReactNode;
-};
 
 const sigform = <P,>(Component: ComponentType<P>) => {
   return forwardRef((props: SigFormComponentProps<P>, ref) => {
@@ -40,33 +24,20 @@ const sigform = <P,>(Component: ComponentType<P>) => {
   });
 };
 
-export type SigFormHelpers = Pick<
-  SigFormContextHelpers,
-  "setFormErrors" | "clearFormErrors" | "setFormValues"
->;
-
-export type SigFormComponentProps<P> = P & {
-  onChange?: (value: any, helpers: SigFormHelpers) => void;
-  onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
-  signal?: Signal<any>;
-  className?: string;
+type ChildrenProps = {
+  children: ReactNode;
 };
 
 export const SigForm = sigform(
   forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
-    const { onSubmit, onChange, children, className = "" } = props;
+    const { onSubmit, defaultValue, children } = props;
+
     const ctx = useSigformContext();
-
-    const lastData = useRef<any | null>(null);
-
-    // Use provided signal or create own.
-    const form = useMemo(
-      () => props.signal ?? deepSignal<Record<string, any>>(undefined),
-      [],
-    );
 
     const name = ctx.formId;
     const ref = useRef<any>(null);
+
+    const formData = ctx.data[name];
 
     useEffect(() => {
       // Set name(formId) to data attribute.
@@ -75,11 +46,10 @@ export const SigForm = sigform(
 
       // Fetch value on mount.
       requestAnimationFrame(() => {
-        if (!props.signal) {
-          form.value = ctx.getFormData(name);
-        }
         // Register form into context.
-        ctx.registerField([name], form);
+        ctx.bindForm(name, defaultValue || {}, (data) => {
+          props.onChange && props.onChange(data, helpers);
+        });
       });
 
       return () => {
@@ -87,23 +57,6 @@ export const SigForm = sigform(
         ctx.unRegisterField(name);
       };
     }, [name]);
-
-    const helpers = {
-      setFormErrors: ctx.setFormErrors,
-      clearFormErrors: ctx.clearFormErrors,
-      setFormValues: ctx.setFormValues,
-    };
-
-    useSignalEffect(() => {
-      // Skip calling "onChange" fn for "undefined" value.
-      if (form.value === undefined) return;
-      // Emit 'onChange' only if we have any diff by deep comparison.
-      let data = clone(form.value);
-      if (!isEqual(lastData.current, data)) {
-        onChange && onChange(data, helpers);
-      }
-      lastData.current = data;
-    });
 
     const handleRef = useCallback((r: any) => {
       if (typeof outerRef === "function") {
@@ -114,16 +67,21 @@ export const SigForm = sigform(
       ref.current = r;
     }, []);
 
+    const helpers = {
+      setFormErrors: ctx.setFormErrors,
+      clearFormErrors: ctx.clearFormErrors,
+      setFormValues: ctx.setFormValues,
+    };
+
     // Use form only if "onSubmit" specified.
     if (onSubmit) {
       return (
         <form
-          className={className}
           onSubmit={(e) => {
             // Prevent default "form submit"
             e.preventDefault();
             // And handle form submission by user defined 'onSubmit' handler.
-            onSubmit && onSubmit(clone(form.value), helpers, e);
+            onSubmit && onSubmit(clone(formData), helpers, e);
           }}
           ref={handleRef}
         >
@@ -133,10 +91,6 @@ export const SigForm = sigform(
     }
 
     // Or defaults to "div" which allow nesting.
-    return (
-      <div className={className} ref={handleRef}>
-        {children}
-      </div>
-    );
+    return <div ref={handleRef}>{children}</div>;
   }),
 );
