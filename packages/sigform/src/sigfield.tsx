@@ -34,6 +34,7 @@ export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
   // Field helpers.
   helpers?: SigfieldHelpers;
   mutate: (recipe: Producer<T>) => void;
+  setValue: (value: T) => void;
 };
 
 export type OuterSigfieldProps<T> = {
@@ -105,8 +106,8 @@ export const sigfield = <P = any, T = any, E = string>(
 
     const { fieldTree, fullFieldName, ref } = useSyncFieldName(nameStr, formId);
 
-    const value =
-      ctx.getFieldValue(fullFieldName) ?? (defaultValue || undefined);
+    const defaultValueRef = useRef(defaultValue || undefined);
+    const value = ctx.getFieldValue(fullFieldName) ?? defaultValueRef.current;
 
     const error = useMemo(() => {
       return get(ctx.errors, fullFieldName);
@@ -116,7 +117,7 @@ export const sigfield = <P = any, T = any, E = string>(
       if (!fullFieldName) {
         return;
       }
-      ctx.registerField(fieldTree, defaultValue || null);
+      ctx.registerField(fieldTree, defaultValueRef.current || null);
       return () => {
         ctx.unRegisterField(fullFieldName);
       };
@@ -139,16 +140,25 @@ export const sigfield = <P = any, T = any, E = string>(
       };
     }, [ctx.data, ctx.errors]);
 
+    const isReady = ctx.getFieldIsReady(fullFieldName);
+    const mutateFn = (recipe: Producer<T>) => {
+      const [nextState, patches] = mutate(value as any, recipe, name);
+      if (isReady) {
+        ctx.propagateChange(fullFieldName, patches);
+      } else if (nextState) {
+        // Keep "nextState" as defaultValue if not ready (not registered).
+        defaultValueRef.current = nextState;
+      }
+    };
+
     return (
       <Component
         {...(rest as any)}
         name={name ? String(name) : undefined}
-        mutate={(recipe: Producer<T>) => {
-          const [_, patches] = mutate(value as any, recipe, name);
-          ctx.propagateChange(fullFieldName, patches);
-        }}
         helpers={helpers}
         error={error}
+        mutate={mutateFn}
+        setValue={(value: T) => mutateFn(() => value as any)}
         value={value}
         ref={ref}
       />
@@ -161,20 +171,28 @@ export const sigfield = <P = any, T = any, E = string>(
   ) => {
     const { name, defaultValue, value, onChange, error, ...rest } = props;
 
+    // Use internal "state" for "defaultValue-only" scenario.
+    const [state, setState] = useState<T | undefined>(
+      defaultValue === undefined ? undefined : defaultValue,
+    );
+
+    // "value" which we will work on.
+    const currentValue = value === undefined ? state : value;
+
+    const mutateFn = (recipe: Producer<T>) => {
+      const [nextState, patches] = mutate(currentValue, recipe, name);
+      setState(nextState);
+      onChange && onChange(nextState, patches);
+    };
+
     return (
       <Component
         {...(rest as any)}
         name={name ? String(name) : undefined}
-        mutate={(recipe: Producer<T>) => {
-          const [nextState, patches] = mutate(
-            value ?? defaultValue ?? undefined,
-            recipe,
-            name,
-          );
-          onChange && onChange(nextState, patches);
-        }}
         error={error}
-        value={value}
+        mutate={mutateFn}
+        setValue={(value: T) => mutateFn(() => value as any)}
+        value={currentValue}
         defaultValue={defaultValue}
       />
     );

@@ -7,9 +7,7 @@ type Data = {
   value: string;
 };
 export const ArrayInput = sigfield<{}, Data[]>((props, ref) => {
-  const { mutate } = props;
-
-  const array = props.value;
+  const { mutate, value: array } = props;
 
   return (
     <div className="p-4 bg-blue-400" ref={ref}>

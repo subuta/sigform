@@ -6,6 +6,7 @@ import {
   FormEvent,
   SetStateAction,
   useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -45,9 +46,12 @@ export const useSigform = () => {
 
     // Apply initial fieldValue.
     if (data !== null) {
-      const tmp = clone(data);
-      set(tmp, name, value);
-      setData(tmp);
+      setData((data: any) => {
+        // Fetch latest "data" and clone for mutable operation.
+        const tmp = clone(data);
+        set(tmp, name, value);
+        return tmp;
+      });
     }
 
     fieldsRef.current.push({
@@ -82,6 +86,10 @@ export const useSigform = () => {
   };
 
   const getFieldValue = (fieldName: string) => get(data as any, fieldName);
+  const getFieldIsReady = (fieldName: string | null) => {
+    if (!fieldName) return false;
+    return !!getField(fieldName);
+  };
 
   const propagateChange = (fullFieldName: string, patches: Patch[]) => {
     if (!fullFieldName) return;
@@ -106,6 +114,7 @@ export const useSigform = () => {
     if (parentField) {
       const parentValue = getFieldValue(parentName);
       const nextState = applyPatches(parentValue || {}, patches);
+
       parentField.onChange && parentField.onChange(nextState);
 
       // Propagate changes to in-direct parent.
@@ -160,6 +169,7 @@ export const useSigform = () => {
     unRegisterField,
     propagateChange,
     getFieldValue,
+    getFieldIsReady,
     setFormErrors,
     clearFormErrors,
     setFormValues,
@@ -168,6 +178,7 @@ export const useSigform = () => {
 };
 
 export type SigFormComponentProps<P> = P & {
+  className?: string;
   onChange?: (value: any, helpers: SigFormHelpers) => void;
   onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
   defaultValue?: any;

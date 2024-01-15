@@ -10,7 +10,7 @@ export const TextInput = sigfield<
   { className?: string; testId?: string },
   string
 >((props, ref) => {
-  const { className, value, mutate, error } = props;
+  const { className, value, setValue, error } = props;
 
   return (
     <div className={cx("relative", error && "pb-6")}>
@@ -23,7 +23,7 @@ export const TextInput = sigfield<
         type="text"
         data-testid={props.testId || ""}
         ref={ref}
-        onChange={(e) => mutate(() => e.target.value)}
+        onChange={(e) => setValue(e.target.value)}
         value={value}
       />
 
@@ -42,6 +42,7 @@ export const TextInput = sigfield<
 type Todo = {
   id: number;
   task: string;
+  done: boolean;
 };
 
 // Input field for TODO type.
@@ -69,8 +70,24 @@ const TodoInput = sigfield<
       <div className="ml-2 h-[34px] flex items-center">
         <button
           type="button"
+          data-testid={`button:${todo.id}:toggle`}
+          className={cx(
+            "flex items-center text-xl",
+            todo.done ? "text-green-400" : "text-gray-400",
+          )}
+          onClick={() => {
+            mutate((draft) => {
+              draft.done = !draft.done;
+            });
+          }}
+        >
+          <i className="material-symbols-outlined">check</i>
+        </button>
+
+        <button
+          type="button"
           data-testid={`button:${todo.id}:remove`}
-          className="flex items-center text-xl text-gray-400 "
+          className="ml-1 flex items-center text-xl text-gray-400 "
           onClick={() => onRemove(todo)}
         >
           <i className="material-symbols-outlined">close</i>
@@ -85,9 +102,9 @@ const TodoInput = sigfield<
 
 // Input field for TODO array type.
 export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
-  let { value, helpers, mutate, error } = props;
+  let { value, defaultValue, helpers, mutate, error } = props;
 
-  const todos = value;
+  const todos = value ?? defaultValue;
   const isEmpty = todos.length === 0;
 
   // Field level validation example.
@@ -133,7 +150,7 @@ export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
         onClick={() => {
           const nextId = (_.max(_.map(todos, "id")) || 0) + 1;
           mutate((draft) => {
-            draft.push({ id: nextId, task: "" });
+            draft.push({ id: nextId, task: "", done: false });
           });
         }}
       >

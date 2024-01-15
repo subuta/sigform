@@ -37,7 +37,10 @@ export default function Index() {
         }}
       >
         {/* For usage with form */}
-        <TodoApp name="todos" defaultValue={[{ id: 1, task: "buy egg" }]} />
+        <TodoApp
+          name="todos"
+          defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+        />
         {/*
         // Or use "Raw" component.
         <TodoApp.Raw

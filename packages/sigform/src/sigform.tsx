@@ -30,7 +30,7 @@ type ChildrenProps = {
 
 export const SigForm = sigform(
   forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
-    const { onSubmit, defaultValue, children } = props;
+    const { className = "", onSubmit, defaultValue, children } = props;
 
     const ctx = useSigformContext();
 
@@ -77,6 +77,7 @@ export const SigForm = sigform(
     if (onSubmit) {
       return (
         <form
+          className={className}
           onSubmit={(e) => {
             // Prevent default "form submit"
             e.preventDefault();
@@ -91,6 +92,10 @@ export const SigForm = sigform(
     }
 
     // Or defaults to "div" which allow nesting.
-    return <div ref={handleRef}>{children}</div>;
+    return (
+      <div className={className} ref={handleRef}>
+        {children}
+      </div>
+    );
   }),
 );
