@@ -10,7 +10,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.module.js",
   "types": "./dist/src/index.d.ts",
-  "source": "src/index.ts",
+  "source": "./src/index.ts",
   "scripts": {
     "prepublishOnly": "yarn build && cp -f ../../README.md ./",
     "test": "jest",
