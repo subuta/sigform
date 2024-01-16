@@ -1,6 +1,6 @@
 {
   "name": "sigform",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Nestable react form UI with Signals",
   "type": "module",
   "exports": {
@@ -9,6 +9,7 @@
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.module.js",
+  "types": "./dist/src/index.d.ts",
   "source": "src/index.ts",
   "scripts": {
     "prepublishOnly": "yarn build && cp -f ../../README.md ./",
