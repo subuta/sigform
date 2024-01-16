@@ -3,11 +3,19 @@
   "version": "0.11.6",
   "description": "Nestable react form UI with Signals",
   "type": "module",
-  "main": "./src/index.ts",
-  "exports": "./src/index.ts",
+  "exports": {
+    "require": "./dist/index.cjs",
+    "default": "./dist/index.modern.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.module.js",
+  "source": "src/index.ts",
   "scripts": {
-    "prepublishOnly": "cp -f ../../README.md ./",
-    "test": "jest"
+    "prepublishOnly": "yarn build && cp -f ../../README.md ./",
+    "test": "jest",
+    "_build": "microbundle --no-compress --jsx React.createElement --jsxFragment React.Fragment --jsxImportSource react --globals react/jsx-runtime=jsx",
+    "build": "yarn _build",
+    "watch": "yarn _build watch"
   },
   "repository": "git+https://github.com/subuta/sigform.git",
   "keywords": [],
@@ -16,6 +24,10 @@
   "bugs": {
     "url": "https://github.com/subuta/sigform/issues"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "homepage": "https://github.com/subuta/sigform#readme",
   "peerDependencies": {
     "react": "^16.14.0 || 17.x || 18.x"
@@ -40,6 +52,7 @@
     "@types/react": "18.2.21",
     "@types/react-dom": "^18.2.7",
     "jest": "^29.6.4",
+    "microbundle": "^0.15.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "ts-jest": "^29.1.1"

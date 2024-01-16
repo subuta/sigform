@@ -10,9 +10,6 @@
     ],
     "target": "es6",
     "paths": {
-      "sigform": [
-        "../packages/sigform/src/index.ts"
-      ],
       "@/*": [
         "./src/*"
       ]

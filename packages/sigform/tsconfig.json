@@ -8,7 +8,7 @@
       "dom.iterable",
       "esnext"
     ],
-    "target": "es6",
+    "target": "ESNext",
     "paths": {},
     "allowJs": true,
     "skipLibCheck": true,
@@ -16,7 +16,7 @@
     "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,

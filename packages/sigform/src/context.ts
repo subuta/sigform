@@ -1,5 +1,6 @@
-import { clone, flatten, get, set, unflatten, wrapPatches } from "./util";
+import { clone, get, set, wrapPatches } from "./util";
 import debounce from "debounce-fn";
+import * as flat from "flat";
 import { Patch, applyPatches } from "immer";
 import {
   Dispatch,
@@ -13,6 +14,9 @@ import {
 } from "react";
 import isEqual from "react-fast-compare";
 import { createContainer } from "unstated-next";
+
+const flatten = flat.default.flatten;
+const unflatten = flat.default.unflatten;
 
 export type SigFormErrors = Record<string, string | undefined>;
 
