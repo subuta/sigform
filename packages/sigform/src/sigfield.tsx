@@ -106,7 +106,7 @@ export const sigfield = <P = any, T = any, E = string>(
 
     const { fieldTree, fullFieldName, ref } = useSyncFieldName(nameStr, formId);
 
-    const defaultValueRef = useRef(defaultValue || undefined);
+    const defaultValueRef = useRef(defaultValue ?? undefined);
     const value = ctx.getFieldValue(fullFieldName) ?? defaultValueRef.current;
 
     const error = useMemo(() => {
@@ -117,7 +117,7 @@ export const sigfield = <P = any, T = any, E = string>(
       if (!fullFieldName) {
         return;
       }
-      ctx.registerField(fieldTree, defaultValueRef.current || null);
+      ctx.registerField(fieldTree, defaultValueRef.current ?? null);
       return () => {
         ctx.unRegisterField(fullFieldName);
       };

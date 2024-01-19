@@ -5,7 +5,8 @@ export const wrapPatches = (patches: Patch[], name: string | number | null) => {
   // Skip wrap if no explicit name passed.
   if (name === null) return;
   patches.forEach((patch) => {
-    patch.path.unshift(name);
+    const chunks = String(name).split(".");
+    patch.path = [...chunks, ...patch.path];
   });
 };
 
