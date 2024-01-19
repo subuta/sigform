@@ -8,6 +8,7 @@
       "dom.iterable",
       "esnext"
     ],
+    "declarationDir": "./dist",
     "target": "ESNext",
     "paths": {},
     "allowJs": true,
