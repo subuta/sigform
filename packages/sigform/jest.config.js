@@ -21,5 +21,6 @@ export default {
     "@/*": ["src/*"],
     "fixtures/*": ["fixtures/*"],
   }),
+  globalSetup: "./globalSetup.js",
   transformIgnorePatterns: [`/node_modules/(?!${esmPackages.join("|")})`],
 };

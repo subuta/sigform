@@ -1,8 +1,4 @@
-import rfdc from "rfdc";
 import invariant from "tiny-invariant";
-
-// Tiny & faster `_.clone` function.
-export const clone = rfdc();
 
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#get)
 export const get = (obj: Record<string, any>, path: string, defValue?: any) => {

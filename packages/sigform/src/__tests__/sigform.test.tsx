@@ -1,4 +1,5 @@
 import { CheckboxInput } from "../../fixtures/CheckboxInput";
+import { DateInput } from "../../fixtures/DateInput";
 import { TextInput } from "../../fixtures/TextInput";
 import { SigForm } from "../sigform";
 import { nextTick } from "../util";
@@ -120,6 +121,35 @@ describe("sigform", () => {
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(dataOfMockCall(onChange, 1)).toEqual({ text: "world" });
+    });
+
+    it("should handle nested string input", async () => {
+      const { container } = render(
+        <SigForm onChange={onChange} onSubmit={onSubmit}>
+          <TextInput name="nested.text" defaultValue="world" />
+          <TextInput name="text" defaultValue="hello" />
+
+          <button type="submit">submit</button>
+        </SigForm>,
+      );
+
+      await waitNextTick();
+
+      const input = container.querySelector(`input[name="nested.text"]`);
+      invariant(input, "must exists");
+      expect(input).toHaveValue("world");
+
+      const form = container.querySelector(`form`);
+      invariant(form, "must exists");
+
+      fireEvent.change(input, { target: { value: "world2" } });
+      expect(input).toHaveValue("world2");
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(dataOfMockCall(onChange, 1)).toEqual({
+        nested: { text: "world2" },
+        text: "hello",
+      });
     });
 
     it("should handle boolean defaultValue", async () => {
@@ -305,6 +335,54 @@ describe("sigform", () => {
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
       expect(dataOfMockCall(onSubmit, 1)).toEqual({ obj: { propA: "world" } });
+    });
+  });
+
+  describe("issues", () => {
+    let onChange: jest.Mock;
+    let onSubmit: jest.Mock;
+
+    // Setup event handlers.
+    beforeEach(() => {
+      onChange = jest.fn(() => {});
+      onSubmit = jest.fn(() => {});
+    });
+
+    it("should handle date input", async () => {
+      const { container } = render(
+        <SigForm onChange={onChange} onSubmit={onSubmit}>
+          <DateInput name="date" defaultValue={new Date()} />
+
+          <button type="submit">submit</button>
+        </SigForm>,
+      );
+
+      await waitNextTick();
+
+      const input = container.querySelector(`input[name="date"]`);
+      invariant(input, "must exists");
+
+      expect(onChange).toHaveBeenCalledTimes(0);
+
+      fireEvent.change(input, { target: { value: "2023-12-01" } });
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      expect(input).toHaveValue("2023-12-01");
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(dataOfMockCall(onChange, 1)).toEqual({
+        date: expect.any(Date),
+      });
+
+      fireEvent.change(input, { target: { value: "" } });
+      expect(onChange).toHaveBeenCalledTimes(2);
+
+      expect(input).toHaveValue("");
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(dataOfMockCall(onChange, 2)).toEqual({
+        date: null,
+      });
     });
   });
 });

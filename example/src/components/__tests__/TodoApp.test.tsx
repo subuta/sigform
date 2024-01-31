@@ -29,7 +29,9 @@ describe("TodoApp", () => {
       <SigForm onChange={onChange}>
         <TodoApp
           name="todos"
-          defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
         />
       </SigForm>,
     );
@@ -58,22 +60,22 @@ describe("TodoApp", () => {
 
     expect(dataOfMockCall(onChange, 1)).toEqual({ todos: [] });
     expect(dataOfMockCall(onChange, 2)).toEqual({
-      todos: [{ id: 1, task: "", done: false }],
+      todos: [{ id: 1, task: "", done: false, dueDate: expect.any(Date) }],
     });
     expect(dataOfMockCall(onChange, 3)).toEqual({
-      todos: [{ id: 1, task: "hello", done: false }],
+      todos: [{ id: 1, task: "hello", done: false, dueDate: expect.any(Date) }],
     });
     expect(dataOfMockCall(onChange, 4)).toEqual({
       todos: [
-        { id: 1, task: "hello", done: false },
-        { id: 2, task: "", done: false },
+        { id: 1, task: "hello", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "", done: false, dueDate: expect.any(Date) },
       ],
     });
 
     expect(dataOfMockCall(onChange, 5)).toEqual({
       todos: [
-        { id: 1, task: "world", done: false },
-        { id: 2, task: "", done: false },
+        { id: 1, task: "world", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "", done: false, dueDate: expect.any(Date) },
       ],
     });
   });
@@ -85,7 +87,9 @@ describe("TodoApp", () => {
       <SigForm onSubmit={onSubmit}>
         <TodoApp
           name="todos"
-          defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
         />
 
         <button data-testid="submit">submit</button>
@@ -102,7 +106,9 @@ describe("TodoApp", () => {
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(dataOfMockCall(onSubmit, 1)).toEqual({
-      todos: [{ id: 1, task: "buy egg", done: false }],
+      todos: [
+        { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      ],
     });
 
     const removeButton = getByTestId(container, "button:1:remove");
@@ -127,7 +133,7 @@ describe("TodoApp", () => {
 
     expect(onSubmit).toHaveBeenCalledTimes(3);
     expect(dataOfMockCall(onSubmit, 3)).toEqual({
-      todos: [{ id: 1, task: "hello", done: false }],
+      todos: [{ id: 1, task: "hello", done: false, dueDate: expect.any(Date) }],
     });
   });
 
@@ -138,7 +144,9 @@ describe("TodoApp", () => {
       <SigForm onChange={onChange}>
         <TodoApp
           name="todos"
-          defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
         />
       </SigForm>,
     );
@@ -153,8 +161,8 @@ describe("TodoApp", () => {
 
     expect(dataOfMockCall(onChange, 1)).toEqual({
       todos: [
-        { id: 1, task: "buy egg", done: false },
-        { id: 2, task: "", done: false },
+        { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "", done: false, dueDate: expect.any(Date) },
       ],
     });
 
@@ -165,8 +173,8 @@ describe("TodoApp", () => {
 
     expect(dataOfMockCall(onChange, 2)).toEqual({
       todos: [
-        { id: 1, task: "buy egg", done: false },
-        { id: 2, task: "hello", done: false },
+        { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
       ],
     });
 
@@ -174,9 +182,9 @@ describe("TodoApp", () => {
 
     expect(dataOfMockCall(onChange, 3)).toEqual({
       todos: [
-        { id: 1, task: "buy egg", done: false },
-        { id: 2, task: "hello", done: false },
-        { id: 3, task: "", done: false },
+        { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
+        { id: 3, task: "", done: false, dueDate: expect.any(Date) },
       ],
     });
 
@@ -185,9 +193,9 @@ describe("TodoApp", () => {
     expect(onChange).toHaveBeenCalledTimes(4);
     expect(dataOfMockCall(onChange, 4)).toEqual({
       todos: [
-        { id: 1, task: "buy egg", done: false },
-        { id: 2, task: "world", done: false },
-        { id: 3, task: "", done: false },
+        { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+        { id: 2, task: "world", done: false, dueDate: expect.any(Date) },
+        { id: 3, task: "", done: false, dueDate: expect.any(Date) },
       ],
     });
   });
@@ -197,7 +205,7 @@ describe("TodoApp", () => {
 
     const TestApp = () => {
       const [todos, setTodos] = useState([
-        { id: 1, task: "buy egg", done: false },
+        { id: 1, task: "buy egg", done: false, dueDate: new Date() },
       ]);
 
       return (
@@ -222,8 +230,8 @@ describe("TodoApp", () => {
     fireEvent.click(appendButton);
 
     expect(dataOfMockCall(onChange, 1)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "", done: false, dueDate: expect.any(Date) },
     ]);
 
     input = getByTestId(container, "input:2");
@@ -232,17 +240,17 @@ describe("TodoApp", () => {
     fireEvent.change(input, { target: { value: "hello" } });
 
     expect(dataOfMockCall(onChange, 2)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "hello", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
     ]);
 
     fireEvent.click(appendButton);
 
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(dataOfMockCall(onChange, 3)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "hello", done: false },
-      { id: 3, task: "", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
+      { id: 3, task: "", done: false, dueDate: expect.any(Date) },
     ]);
   });
 
@@ -252,7 +260,9 @@ describe("TodoApp", () => {
     const { container } = render(
       <TodoApp.Raw
         onChange={onChange}
-        defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+        defaultValue={[
+          { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+        ]}
       />,
     );
 
@@ -265,8 +275,8 @@ describe("TodoApp", () => {
     fireEvent.click(appendButton);
 
     expect(dataOfMockCall(onChange, 1)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "", done: false, dueDate: expect.any(Date) },
     ]);
 
     input = getByTestId(container, "input:2");
@@ -275,17 +285,17 @@ describe("TodoApp", () => {
     fireEvent.change(input, { target: { value: "hello" } });
 
     expect(dataOfMockCall(onChange, 2)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "hello", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
     ]);
 
     fireEvent.click(appendButton);
 
     expect(onChange).toHaveBeenCalledTimes(3);
     expect(dataOfMockCall(onChange, 3)).toEqual([
-      { id: 1, task: "buy egg", done: false },
-      { id: 2, task: "hello", done: false },
-      { id: 3, task: "", done: false },
+      { id: 1, task: "buy egg", done: false, dueDate: expect.any(Date) },
+      { id: 2, task: "hello", done: false, dueDate: expect.any(Date) },
+      { id: 3, task: "", done: false, dueDate: expect.any(Date) },
     ]);
   });
 
@@ -306,7 +316,9 @@ describe("TodoApp", () => {
       >
         <TodoApp
           name="todos"
-          defaultValue={[{ id: 1, task: "buy egg", done: false }]}
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
         />
       </SigForm>,
     );
@@ -324,7 +336,9 @@ describe("TodoApp", () => {
     await waitNextTick();
 
     expect(dataOfMockCall(onChange, 1)).toEqual({
-      todos: [{ id: 1, task: "invalid", done: false }],
+      todos: [
+        { id: 1, task: "invalid", done: false, dueDate: expect.any(Date) },
+      ],
     });
     const error = getByTestId(container, "input:1:error");
     expect(error.innerText).toEqual("some error");

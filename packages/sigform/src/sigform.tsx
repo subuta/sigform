@@ -3,7 +3,6 @@ import {
   SigformContext,
   useSigformContext,
 } from "./context";
-import { clone } from "./util";
 import React, {
   ComponentType,
   ReactNode,
@@ -82,7 +81,7 @@ export const SigForm = sigform(
             // Prevent default "form submit"
             e.preventDefault();
             // And handle form submission by user defined 'onSubmit' handler.
-            onSubmit && onSubmit(clone(formData), helpers, e);
+            onSubmit && onSubmit(formData, helpers, e);
           }}
           ref={handleRef}
         >

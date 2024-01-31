@@ -1,13 +1,12 @@
-import { clone, get, set, wrapPatches } from "./util";
+import { get, set, wrapPatches } from "./util";
 import debounce from "debounce-fn";
 import * as flat from "flat";
-import { Patch, applyPatches } from "immer";
+import { Patch, applyPatches, produce } from "immer";
 import {
   Dispatch,
   FormEvent,
   SetStateAction,
   useCallback,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -50,11 +49,11 @@ export const useSigform = () => {
 
     // Apply initial fieldValue.
     if (data !== null) {
+      // Fetch latest "data" and call "produce" for mutable operation.
       setData((data: any) => {
-        // Fetch latest "data" and clone for mutable operation.
-        const tmp = clone(data);
-        set(tmp, name, value);
-        return tmp;
+        return produce(data, (draft: any) => {
+          set(draft, name, value);
+        });
       });
     }
 

@@ -107,7 +107,9 @@ export const sigfield = <P = any, T = any, E = string>(
     const { fieldTree, fullFieldName, ref } = useSyncFieldName(nameStr, formId);
 
     const defaultValueRef = useRef(defaultValue ?? undefined);
-    const value = ctx.getFieldValue(fullFieldName) ?? defaultValueRef.current;
+    const currentValue = ctx.getFieldValue(fullFieldName);
+    const value =
+      currentValue === undefined ? defaultValueRef.current : currentValue;
 
     const error = useMemo(() => {
       return get(ctx.errors, fullFieldName);
