@@ -1,6 +1,4 @@
-import { get, set, wrapPatches } from "./util";
-import debounce from "debounce-fn";
-import * as flat from "flat";
+import { get, mergeFlatten, set, wrapPatches } from "./util";
 import { Patch, applyPatches, produce } from "immer";
 import {
   Dispatch,
@@ -11,13 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
-import isEqual from "react-fast-compare";
 import { createContainer } from "unstated-next";
 
-const flatten = flat.default.flatten;
-const unflatten = flat.default.unflatten;
-
-export type SigFormErrors = Record<string, string | undefined>;
+export type SigFormErrors = Record<string, string[] | string | undefined>;
 
 export type SigFormField<T> = {
   fieldTree?: string[];
@@ -25,18 +19,12 @@ export type SigFormField<T> = {
   onChange?: Dispatch<SetStateAction<T>>;
 };
 
-export const useSigform = () => {
+const useSigform = () => {
   const formId = useId();
-  const asData = (data: any) => {
-    return unflatten(
-      flatten({
-        [formId]: data,
-      }),
-    ) as Record<string, any>;
-  };
 
-  const [data, setData] = useState<any>(asData(null));
+  const [data, setData] = useState<any>(null);
   const fieldsRef = useRef<SigFormField<any>[]>([]);
+  const onChangeRef = useRef<Dispatch<SetStateAction<any>>>();
   const [errors, setErrors] = useState<SigFormErrors>({});
 
   const registerField = function <T>(
@@ -69,11 +57,8 @@ export const useSigform = () => {
     defaultValue: T | null,
     onChange?: Dispatch<SetStateAction<T>>,
   ) {
-    registerField([name], defaultValue, (data) => {
-      setData(asData(data));
-      onChange && onChange(data);
-    });
-    setData(asData(defaultValue));
+    setData(defaultValue);
+    onChangeRef.current = onChange;
   };
 
   const unRegisterField = (fieldName: string) => {
@@ -104,64 +89,46 @@ export const useSigform = () => {
     names.pop();
 
     // Stop if reached at root.
-    if (names.length === 0) {
+    const isRoot = names.length === 0;
+    if (isRoot) {
+      const nextData = applyPatches(data || {}, patches);
+      setData(nextData);
+      // Emit form.onChange if defined.
+      onChangeRef.current && onChangeRef.current(nextData);
       return;
     }
 
     // Do propagate changes to parent if parent field found.
     const parentName = names.join(".");
     const parentFieldName = names[names.length - 1];
-    const hasParent = parentFieldName !== formId;
 
     const parentField = getField(parentName);
     if (parentField) {
       const parentValue = getFieldValue(parentName);
       const nextState = applyPatches(parentValue || {}, patches);
-
       parentField.onChange && parentField.onChange(nextState);
-
       // Propagate changes to in-direct parent.
-      if (hasParent) {
-        wrapPatches(patches, parentFieldName);
-        propagateChange(parentName, patches);
-      }
+      wrapPatches(patches, parentFieldName);
+      propagateChange(parentName, patches);
     }
   };
 
-  // Debounce setErrors for preventing flicker on `clearFormErrors & setFormErrors` call in same tick.
-  const setErrorsIfChanged = useCallback(
-    debounce((nextErrors: SigFormErrors) => {
-      if (isEqual(nextErrors, errors)) return;
-      setErrors(nextErrors);
-    }),
-    [errors],
-  );
-
-  const setFormErrors = useCallback(
-    (formErrors: Record<string, any>, prefix = formId) => {
-      setErrorsIfChanged(
-        unflatten(
-          flatten({
-            [prefix]: formErrors,
-          }),
-        ),
-      );
-    },
-    [],
-  );
+  const setFormErrors = (formErrors: SigFormErrors) => {
+    setErrors(mergeFlatten(errors, formErrors));
+  };
 
   const clearFormErrors = useCallback(() => {
     setFormErrors({});
   }, []);
 
-  const setFormValues = (value: any, prefix = formId) => {
-    setData((data: any) => {
-      return unflatten(
-        flatten({
-          [prefix]: value,
-        }),
-      );
-    });
+  // Reset whole form with provided value.
+  const resetFormValue = (data: any) => {
+    setData(data);
+  };
+
+  // Set multiple field values at once (without reset)
+  const setFieldValues = (fieldValues: any) => {
+    setData(mergeFlatten(data, fieldValues));
   };
 
   return {
@@ -175,7 +142,8 @@ export const useSigform = () => {
     getFieldIsReady,
     setFormErrors,
     clearFormErrors,
-    setFormValues,
+    resetFormValue,
+    setFieldValues,
     errors,
   };
 };
@@ -194,5 +162,9 @@ export type SigFormContextHelpers = ReturnType<typeof useSigform>;
 
 export type SigFormHelpers = Pick<
   SigFormContextHelpers,
-  "setFormErrors" | "clearFormErrors" | "setFormValues"
+  | "data"
+  | "setFormErrors"
+  | "clearFormErrors"
+  | "resetFormValue"
+  | "setFieldValues"
 >;

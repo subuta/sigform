@@ -8,7 +8,6 @@ export const computeFieldTree = (
   invariant(node, "must exists");
   const name = node.dataset.sigform || "";
   if (name === formId) {
-    acc.push(formId);
     // Finish recursive call and format fieldName.
     return acc.filter((str) => !!str).reverse();
   }

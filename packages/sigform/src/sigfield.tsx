@@ -1,4 +1,4 @@
-import { useSigformContext } from "./context";
+import { SigFormContextHelpers, useSigformContext } from "./context";
 import { computeFieldTree, get, mutate } from "./util";
 import { Patch, enablePatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
@@ -19,11 +19,12 @@ export type RawFieldProps<P, T> = P & {
   defaultValue?: T;
 };
 
-export type SigfieldHelpers = {
-  clearFormErrors: () => void;
+export type SigfieldHelpers = Pick<
+  SigFormContextHelpers,
+  "clearFormErrors" | "resetFormValue" | "setFieldValues"
+> & {
   setFieldError: (formErrors: any) => void;
   setFieldValue: (rawData: any) => void;
-  setFormValues: (rawData: any) => void;
 };
 
 export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
@@ -126,17 +127,18 @@ export const sigfield = <P = any, T = any, E = string>(
     }, [fullFieldName]);
 
     const setFieldError = (formErrors: any) => {
-      ctx.setFormErrors(formErrors, fullFieldName);
+      ctx.setFormErrors({ [fullFieldName]: formErrors });
     };
 
     const setFieldValue = (rawData: any) => {
-      ctx.setFormValues(rawData, fullFieldName);
+      ctx.setFieldValues({ [fullFieldName]: rawData });
     };
 
     const helpers: SigfieldHelpers = useMemo(() => {
       return {
         clearFormErrors: ctx.clearFormErrors,
-        setFormValues: ctx.setFormValues,
+        resetFormValue: ctx.resetFormValue,
+        setFieldValues: ctx.setFieldValues,
         setFieldError,
         setFieldValue,
       };

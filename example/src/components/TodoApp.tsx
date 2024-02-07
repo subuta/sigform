@@ -24,7 +24,7 @@ const TodoInput = sigfield<
   const todo = value;
 
   return (
-    <div className={cx(className, "flex items-center")} ref={ref}>
+    <div className={cx(className, "flex items-start")} ref={ref}>
       <TextInput.Raw
         onChange={(task) => {
           mutate((draft) => {

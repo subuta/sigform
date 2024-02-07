@@ -1,3 +1,3 @@
 export * from "./sigfield";
 export * from "./sigform";
-export * from "./context";
+export type { SigFormErrors, SigFormHelpers } from "./context";
