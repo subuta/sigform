@@ -11,7 +11,6 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import invariant from "tiny-invariant";
 
 export const isEmptyChildren = (children: any): boolean =>
   React.Children.count(children) === 0;
@@ -35,33 +34,20 @@ type ChildrenProps = {
 
 export const SigForm = sigform(
   forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
-    const { className = "", onSubmit, defaultValue } = props;
+    const { className = "", onSubmit } = props;
 
     const ctx = useSigformContext();
 
-    const name = ctx.formId;
     const ref = useRef<any>(null);
 
-    const data = ctx.data;
+    const root = ctx.root;
 
     useEffect(() => {
-      // Set name(formId) to data attribute.
-      invariant(ref.current, "must exists");
-      ref.current.dataset.sigform = name;
-
-      // Fetch value on mount.
-      requestAnimationFrame(() => {
-        // Register form into context.
-        ctx.bindForm(name, defaultValue || {}, (data) => {
-          props.onChange && props.onChange(data, helpers);
-        });
+      // Register form "onChange" into context.
+      ctx.registerForm((data) => {
+        props.onChange && props.onChange(data, helpers);
       });
-
-      return () => {
-        // Unregister form context on unmount.
-        ctx.unRegisterField(name);
-      };
-    }, [name]);
+    }, []);
 
     const handleRef = useCallback((r: any) => {
       if (typeof outerRef === "function") {
@@ -77,7 +63,8 @@ export const SigForm = sigform(
       clearFormErrors: ctx.clearFormErrors,
       resetFormValue: ctx.resetFormValue,
       setFieldValues: ctx.setFieldValues,
-      data: data,
+      register: ctx.register,
+      root,
     };
 
     let children = null;
@@ -96,7 +83,7 @@ export const SigForm = sigform(
             // Prevent default "form submit"
             e.preventDefault();
             // And handle form submission by user defined 'onSubmit' handler.
-            onSubmit && onSubmit(data, helpers, e);
+            onSubmit && onSubmit(root, helpers, e);
           }}
           ref={handleRef}
         >

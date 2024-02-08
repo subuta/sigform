@@ -20,8 +20,8 @@ const parseDate = (ymd: string): Date | null => {
 export const DateInput = sigfield<
   { testId?: string; className?: string },
   Date | null
->((props, ref) => {
-  const { name, setValue, value: rawValue, className = "" } = props;
+>((props) => {
+  const { setValue, value: rawValue, className = "" } = props;
 
   let value = "";
   if (rawValue instanceof Date && !isInvalidDate(rawValue)) {
@@ -30,9 +30,7 @@ export const DateInput = sigfield<
 
   return (
     <input
-      ref={ref}
       className={cx("px-2 py-1 border rounded h-[34px]", className)}
-      name={name}
       type="date"
       onChange={(e) => setValue(parseDate(e.target.value))}
       value={value}

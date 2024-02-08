@@ -1,179 +1,56 @@
 import { SigFormContextHelpers, useSigformContext } from "./context";
-import { computeFieldTree, get, mutate } from "./util";
+import { mutate } from "./util";
 import { Patch, enablePatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
-import React, {
-  ForwardRefRenderFunction,
-  forwardRef,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import invariant from "tiny-invariant";
+import React, { useState } from "react";
 
 enablePatches();
 
-export type RawFieldProps<P, T> = P & {
-  value: T;
-  defaultValue?: T;
-};
-
 export type SigfieldHelpers = Pick<
   SigFormContextHelpers,
-  "clearFormErrors" | "resetFormValue" | "setFieldValues"
+  "clearFormErrors" | "resetFormValue" | "setFieldValues" | "register"
 > & {
   setFieldError: (formErrors: any) => void;
+  clearFieldError: () => void;
   setFieldValue: (rawData: any) => void;
 };
 
-export type SigfieldProps<P, T, E = string> = RawFieldProps<P, T> & {
-  // Name of field
-  name: string | undefined;
+export type SigfieldProps<P, T, E = string> = P & {
+  // Mutator
+  mutate: (recipe: Producer<T>) => void;
+  // Set value
+  setValue: (value: T) => void;
+  // Value (for Controlled component)
+  value: T;
+  // DefaultValue (for Uncontrolled component)
+  defaultValue?: T;
   // Error of field
   error?: E;
-  // Field helpers.
+  // Field helpers (to be passed from "ctx.register()" fn).
   helpers?: SigfieldHelpers;
-  mutate: (recipe: Producer<T>) => void;
-  setValue: (value: T) => void;
 };
 
-export type OuterSigfieldProps<T> = {
-  // sigfield
-  name?: string | number;
+export type OuterFieldProps<T, E> = {
   defaultValue?: T;
+  // Field helpers (to be passed from "ctx.register()" fn).
+  helpers?: SigfieldHelpers;
 };
 
-export type OuterRawFieldProps<T, E> = {
-  // Name of field
-  name?: string | number;
-  error?: E;
+export type FormFieldProps<T, E> = OuterFieldProps<T, E> & {
+  name: string;
+};
+
+export type RawFieldProps<T, E> = OuterFieldProps<T, E> & {
   onChange?: (value: T, patches: Patch[]) => void;
-  defaultValue?: T;
   value?: T;
-};
-
-const useSyncFieldName = (name: string, formId: string) => {
-  const [fieldTree, setFieldTree] = useState<string[]>([]);
-  const fullFieldName = fieldTree.join(".");
-  const ref = useRef<HTMLElement | null>(null);
-
-  // Sync fieldName to DOM structure.
-  useEffect(() => {
-    // SEE: [reactjs - Typescript: how to declare a type that includes all types extending a common type? - Stack Overflow](https://stackoverflow.com/questions/57201223/typescript-how-to-declare-a-type-that-includes-all-types-extending-a-common-typ)
-    const node = ref.current;
-
-    invariant(
-      node?.dataset,
-      "ref must exists, are you forgotten to define 'ref={props.ref}' on field component?",
-    );
-
-    // Persist change into DOM.
-    node.dataset.sigform = name;
-  }, [name]);
-
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      const node = ref.current;
-      if (node) {
-        // return computed fieldTree by walk parentNodes.
-        const fieldTree = computeFieldTree(node, formId);
-        setFieldTree(fieldTree);
-      }
-    });
-  }, []);
-
-  return {
-    fieldTree,
-    fullFieldName,
-    ref,
-  };
+  error?: E;
 };
 
 export const sigfield = <P = any, T = any, E = string>(
-  RawComponent: ForwardRefRenderFunction<any, SigfieldProps<P, T, E>>,
+  Component: (props: SigfieldProps<P, T, E>) => JSX.Element,
 ) => {
-  // Wrap component in forwardRef.
-  const Component = forwardRef(RawComponent);
-  // Use "sigfield" as default renderer
-  const render = (
-    props: Omit<P, "name" | "defaultValue"> & OuterSigfieldProps<T>,
-  ) => {
-    const { defaultValue, name = null, ...rest } = props;
-    const nameStr = String(name);
-
-    const ctx = useSigformContext();
-    const { formId } = ctx;
-
-    const { fieldTree, fullFieldName, ref } = useSyncFieldName(nameStr, formId);
-
-    const defaultValueRef = useRef(defaultValue ?? undefined);
-    const currentValue = ctx.getFieldValue(fullFieldName);
-    const value =
-      currentValue === undefined ? defaultValueRef.current : currentValue;
-
-    const error = useMemo(() => {
-      return get(ctx.errors, fullFieldName);
-    }, [ctx.errors, fullFieldName]);
-
-    useEffect(() => {
-      if (!fullFieldName) {
-        return;
-      }
-      ctx.registerField(fieldTree, defaultValueRef.current ?? null);
-      return () => {
-        ctx.unRegisterField(fullFieldName);
-      };
-    }, [fullFieldName]);
-
-    const setFieldError = (formErrors: any) => {
-      ctx.setFormErrors({ [fullFieldName]: formErrors });
-    };
-
-    const setFieldValue = (rawData: any) => {
-      ctx.setFieldValues({ [fullFieldName]: rawData });
-    };
-
-    const helpers: SigfieldHelpers = useMemo(() => {
-      return {
-        clearFormErrors: ctx.clearFormErrors,
-        resetFormValue: ctx.resetFormValue,
-        setFieldValues: ctx.setFieldValues,
-        setFieldError,
-        setFieldValue,
-      };
-    }, [ctx.data, ctx.errors]);
-
-    const isReady = ctx.getFieldIsReady(fullFieldName);
-    const mutateFn = (recipe: Producer<T>) => {
-      const [nextState, patches] = mutate(value as any, recipe, name);
-      if (isReady) {
-        ctx.propagateChange(fullFieldName, patches);
-      } else if (nextState) {
-        // Keep "nextState" as defaultValue if not ready (not registered).
-        defaultValueRef.current = nextState;
-      }
-    };
-
-    return (
-      <Component
-        {...(rest as any)}
-        name={name ? String(name) : undefined}
-        helpers={helpers}
-        error={error}
-        mutate={mutateFn}
-        setValue={(value: T) => mutateFn(() => value as any)}
-        value={value}
-        ref={ref}
-      />
-    );
-  };
-
-  // Also export "RawField" as "Component.Raw"
-  render.Raw = (
-    props: Omit<P, "onChange" | "value"> & OuterRawFieldProps<T, E>,
-  ) => {
-    const { name, defaultValue, value, onChange, error, ...rest } = props;
+  const Raw = (props: Omit<P, "onChange" | "value"> & RawFieldProps<T, E>) => {
+    const { defaultValue, value, onChange, error, ...rest } = props;
 
     // Use internal "state" for "defaultValue-only" scenario.
     const [state, setState] = useState<T | undefined>(
@@ -184,7 +61,7 @@ export const sigfield = <P = any, T = any, E = string>(
     const currentValue = value === undefined ? state : value;
 
     const mutateFn = (recipe: Producer<T>) => {
-      const [nextState, patches] = mutate(currentValue, recipe, name);
+      const [nextState, patches] = mutate(currentValue, recipe);
       setState(nextState);
       onChange && onChange(nextState, patches);
     };
@@ -192,7 +69,6 @@ export const sigfield = <P = any, T = any, E = string>(
     return (
       <Component
         {...(rest as any)}
-        name={name ? String(name) : undefined}
         error={error}
         mutate={mutateFn}
         setValue={(value: T) => mutateFn(() => value as any)}
@@ -201,6 +77,18 @@ export const sigfield = <P = any, T = any, E = string>(
       />
     );
   };
+
+  // Use "name & defaultValue" IF (FormField) as default renderer.
+  const render = (
+    props: Omit<P, "onChange" | "value"> & FormFieldProps<T, E>,
+  ) => {
+    const ctx = useSigformContext();
+    const { defaultValue, name, helpers, ...rest } = props;
+    return <Raw {...ctx.register(name, defaultValue)} {...(rest as any)} />;
+  };
+
+  // Also expose "Component.Raw" renderer for traditional "onChange & value" usage (& nested field).
+  render.Raw = Raw;
 
   return render;
 };

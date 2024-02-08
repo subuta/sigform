@@ -1,11 +1,12 @@
+import { OuterFieldProps, SigfieldHelpers } from "./sigfield";
 import { get, mergeFlatten, set, wrapPatches } from "./util";
+import { Field, dig, getTree } from "./util/fieldTree";
 import { Patch, applyPatches, produce } from "immer";
 import {
   Dispatch,
   FormEvent,
   SetStateAction,
   useCallback,
-  useId,
   useRef,
   useState,
 } from "react";
@@ -13,138 +14,143 @@ import { createContainer } from "unstated-next";
 
 export type SigFormErrors = Record<string, string[] | string | undefined>;
 
-export type SigFormField<T> = {
-  fieldTree?: string[];
-  name: string;
-  onChange?: Dispatch<SetStateAction<T>>;
-};
-
 const useSigform = () => {
-  const formId = useId();
-
-  const [data, setData] = useState<any>(null);
-  const fieldsRef = useRef<SigFormField<any>[]>([]);
-  const onChangeRef = useRef<Dispatch<SetStateAction<any>>>();
+  const [root, setRoot] = useState<Field<any>>({
+    value: {},
+    name: "root",
+  });
   const [errors, setErrors] = useState<SigFormErrors>({});
+  const onChangeRef = useRef<Dispatch<SetStateAction<any>>>();
+  const defaultValueQueue = useRef<any>({});
 
-  const registerField = function <T>(
-    fieldTree: string[],
-    value: T | null,
-    onChange?: Dispatch<SetStateAction<T>>,
-  ) {
-    const name = fieldTree.join(".");
-    if (!name) return;
-
-    // Apply initial fieldValue.
-    if (data !== null) {
-      // Fetch latest "data" and call "produce" for mutable operation.
-      setData((data: any) => {
-        return produce(data, (draft: any) => {
-          set(draft, name, value);
-        });
+  const registerForm = function <T>(onChange?: Dispatch<SetStateAction<T>>) {
+    onChangeRef.current = onChange;
+    // Set defaultValue on form mount.
+    setRoot((root) => {
+      return produce(root, (draft: any) => {
+        draft.value = mergeFlatten(draft.value, defaultValueQueue.current);
       });
-    }
-
-    fieldsRef.current.push({
-      fieldTree,
-      name,
-      onChange,
     });
   };
 
-  const bindForm = function <T>(
-    name: string,
-    defaultValue: T | null,
-    onChange?: Dispatch<SetStateAction<T>>,
-  ) {
-    setData(defaultValue);
-    onChangeRef.current = onChange;
-  };
-
-  const unRegisterField = (fieldName: string) => {
-    if (!fieldName) return;
-
-    fieldsRef.current = fieldsRef.current.filter(
-      (field) => field.name !== fieldName,
-    );
-  };
-
-  const getField = (fieldName: string) => {
-    return fieldsRef.current.find((field) => field.name === fieldName);
-  };
-
-  const getFieldValue = (fieldName: string) => get(data as any, fieldName);
-  const getFieldIsReady = (fieldName: string | null) => {
-    if (!fieldName) return false;
-    return !!getField(fieldName);
-  };
-
-  const propagateChange = (fullFieldName: string, patches: Patch[]) => {
-    if (!fullFieldName) return;
-
-    const field = getField(fullFieldName);
-    if (!field) return;
-
-    const names = [...(field.fieldTree as string[])];
-    names.pop();
-
+  const propagateChange = (field: Field<any>, patches: Patch[]) => {
+    const names = getTree(field);
+    const last = names.pop();
     // Stop if reached at root.
-    const isRoot = names.length === 0;
-    if (isRoot) {
-      const nextData = applyPatches(data || {}, patches);
-      setData(nextData);
+    if (last === "root") {
+      const nextState = produce(root, (draft: any) => {
+        applyPatches(draft.value, patches);
+      });
+      setRoot(nextState);
       // Emit form.onChange if defined.
-      onChangeRef.current && onChangeRef.current(nextData);
+      onChangeRef.current && onChangeRef.current(nextState.value);
       return;
     }
 
     // Do propagate changes to parent if parent field found.
-    const parentName = names.join(".");
-    const parentFieldName = names[names.length - 1];
-
-    const parentField = getField(parentName);
-    if (parentField) {
-      const parentValue = getFieldValue(parentName);
-      const nextState = applyPatches(parentValue || {}, patches);
-      parentField.onChange && parentField.onChange(nextState);
+    if (field.parent) {
+      const parentFieldName = names[names.length - 1];
       // Propagate changes to in-direct parent.
-      wrapPatches(patches, parentFieldName);
-      propagateChange(parentName, patches);
+      if (parentFieldName && parentFieldName !== "root") {
+        wrapPatches(patches, parentFieldName);
+      }
+      propagateChange(field.parent, patches);
     }
   };
 
   const setFormErrors = (formErrors: SigFormErrors) => {
-    setErrors(mergeFlatten(errors, formErrors));
+    setErrors((errors) => mergeFlatten(errors, formErrors));
   };
 
   const clearFormErrors = useCallback(() => {
-    setFormErrors({});
+    setErrors({});
   }, []);
 
   // Reset whole form with provided value.
   const resetFormValue = (data: any) => {
-    setData(data);
+    setRoot((root) =>
+      produce(root, (draft) => {
+        draft.value = data;
+      }),
+    );
   };
 
   // Set multiple field values at once (without reset)
   const setFieldValues = (fieldValues: any) => {
-    setData(mergeFlatten(data, fieldValues));
+    setRoot((root) =>
+      produce(root, (draft) => {
+        draft.value = mergeFlatten(root.value, fieldValues);
+      }),
+    );
+  };
+
+  const queueDefaultValueOfField = (
+    fullFieldName: string,
+    defaultValue: any,
+  ) => {
+    // Queue defaultValue for fields (will be applied "once" on initial form mount).
+    defaultValueQueue.current[fullFieldName] = defaultValue;
+  };
+
+  // Register "Raw: onChange & value" component into "SigForm" context.
+  const register = <T>(name: string, defaultValue?: T, parent = root) => {
+    const field = dig(parent, name);
+    const fieldTree = getTree(field);
+    const fullFieldName = fieldTree.join(".");
+
+    queueDefaultValueOfField(fullFieldName, defaultValue);
+
+    const setFieldError = (formErrors: any) => {
+      setFormErrors({ [fullFieldName]: formErrors });
+    };
+
+    const clearFieldError = () => {
+      setFormErrors({ [fullFieldName]: "" });
+    };
+
+    const setFieldValue = (rawData: any) => {
+      setFieldValues({ [fullFieldName]: rawData });
+    };
+
+    const helpers: Partial<SigfieldHelpers> = {
+      clearFormErrors,
+      resetFormValue,
+      setFieldValues,
+      setFieldError,
+      clearFieldError,
+      setFieldValue,
+    };
+
+    // Bind current "field" arg into "register" fn for nested field scenario.
+    helpers.register = (name: string, defaultValue?: T) =>
+      register(name, defaultValue, field);
+
+    const error = get(errors, fullFieldName);
+
+    return {
+      onChange(value: any, patches: Patch[]) {
+        if (name !== null) {
+          wrapPatches(patches, name);
+        }
+        propagateChange(field, patches);
+      },
+      value: field.value,
+      defaultValue,
+      error: error,
+      helpers: helpers,
+    } as OuterFieldProps<any, any>;
   };
 
   return {
-    formId,
-    bindForm,
-    data,
-    registerField,
-    unRegisterField,
+    errors: errors.value,
+    root: root.value,
+    register,
+    registerForm,
     propagateChange,
-    getFieldValue,
-    getFieldIsReady,
     setFormErrors,
     clearFormErrors,
     resetFormValue,
     setFieldValues,
-    errors,
   };
 };
 
@@ -152,7 +158,6 @@ export type SigFormComponentProps<P> = P & {
   className?: string;
   onChange?: (value: any, helpers: SigFormHelpers) => void;
   onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
-  defaultValue?: any;
 };
 
 export const SigformContext = createContainer(useSigform);
@@ -162,9 +167,10 @@ export type SigFormContextHelpers = ReturnType<typeof useSigform>;
 
 export type SigFormHelpers = Pick<
   SigFormContextHelpers,
-  | "data"
+  | "root"
   | "setFormErrors"
   | "clearFormErrors"
   | "resetFormValue"
   | "setFieldValues"
+  | "register"
 >;

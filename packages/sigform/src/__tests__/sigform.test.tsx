@@ -3,22 +3,19 @@ import { DateInput } from "../../fixtures/DateInput";
 import { TextInput } from "../../fixtures/TextInput";
 import { SigFormHelpers } from "../context";
 import { SigForm } from "../sigform";
-import { nextTick } from "../util";
 import { jest } from "@jest/globals";
 import "@testing-library/jest-dom";
 import {
+  act,
   fireEvent,
   getByTestId,
   queryByTestId,
   render,
-  waitFor,
 } from "@testing-library/react";
 import React from "react";
 import { ArrayInput } from "sigform/fixtures/ArrayInput";
 import { ObjectInput } from "sigform/fixtures/ObjectInput";
 import invariant from "tiny-invariant";
-
-const waitNextTick = () => waitFor(() => nextTick());
 
 const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
   if (!fn) return null;
@@ -36,13 +33,11 @@ describe("sigform", () => {
     it("should handle defaultValue", async () => {
       const { container } = render(
         <SigForm>
-          <TextInput name="text" defaultValue="hello" />,
+          <TextInput testId="text" name="text" defaultValue="hello" />
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="text"]`);
+      const input = getByTestId(container, "text");
 
       expect(input).toHaveValue("hello");
     });
@@ -50,13 +45,11 @@ describe("sigform", () => {
     it("should handle boolean defaultValue", async () => {
       const { container } = render(
         <SigForm>
-          <CheckboxInput name="bool" defaultValue={true} />,
+          <CheckboxInput name="bool" testId="bool" defaultValue={true} />,
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="bool"]`);
+      const input = getByTestId(container, "bool");
 
       expect(input).toBeChecked();
     });
@@ -68,16 +61,16 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      const input = container.querySelector(`input[name="propA"]`);
+      const input = getByTestId(container, "propA");
 
       expect(input).toHaveValue("world");
     });
 
-    it("should handle array defaultValue", () => {
+    it("should handle array defaultValue", async () => {
       const { container } = render(
         <SigForm>
           <ArrayInput
-            name="array"
+            name="input"
             defaultValue={[{ id: "1", value: "hoge" }]}
           />
         </SigForm>,
@@ -102,15 +95,13 @@ describe("sigform", () => {
     it("should handle string input", async () => {
       const { container } = render(
         <SigForm onChange={onChange} onSubmit={onSubmit}>
-          <TextInput name="text" defaultValue="hello" />
+          <TextInput testId="text" name="text" defaultValue="hello" />
 
           <button type="submit">submit</button>
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="text"]`);
+      const input = getByTestId(container, "text");
       invariant(input, "must exists");
       expect(input).toHaveValue("hello");
 
@@ -118,6 +109,7 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       fireEvent.change(input, { target: { value: "world" } });
+
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -127,16 +119,18 @@ describe("sigform", () => {
     it("should handle nested string input", async () => {
       const { container } = render(
         <SigForm onChange={onChange} onSubmit={onSubmit}>
-          <TextInput name="nested.text" defaultValue="world" />
-          <TextInput name="text" defaultValue="hello" />
+          <TextInput
+            testId="nested.text"
+            name="nested.text"
+            defaultValue="world"
+          />
+          <TextInput testId="text" name="text" defaultValue="hello" />
 
           <button type="submit">submit</button>
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="nested.text"]`);
+      const input = getByTestId(container, "nested.text");
       invariant(input, "must exists");
       expect(input).toHaveValue("world");
 
@@ -144,6 +138,7 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       fireEvent.change(input, { target: { value: "world2" } });
+
       expect(input).toHaveValue("world2");
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -156,18 +151,17 @@ describe("sigform", () => {
     it("should handle boolean defaultValue", async () => {
       const { container } = render(
         <SigForm>
-          <CheckboxInput name="bool" defaultValue={false} />,
+          <CheckboxInput testId="bool" name="bool" defaultValue={false} />,
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="bool"]`);
+      const input = getByTestId(container, "bool");
 
       expect(input).not.toBeChecked();
       invariant(input, "must exists");
 
       fireEvent.click(input);
+
       expect(input).toBeChecked();
     });
 
@@ -176,14 +170,13 @@ describe("sigform", () => {
         <CheckboxInput.Raw testId="bool" defaultValue={true} />,
       );
 
-      await waitNextTick();
-
       const input = getByTestId(container, "bool");
 
       expect(input).toBeChecked();
       invariant(input, "must exists");
 
       fireEvent.click(input);
+
       expect(input).not.toBeChecked();
     });
 
@@ -196,12 +189,11 @@ describe("sigform", () => {
         />,
       );
 
-      await waitNextTick();
-
       const input = getByTestId(container, "input");
       invariant(input, "must exists");
 
       fireEvent.change(input, { target: { value: "world" } });
+
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -213,21 +205,24 @@ describe("sigform", () => {
 
     it("should handle Raw with name", async () => {
       const { container } = render(
-        <TextInput.Raw name="text" onChange={onChange} defaultValue="hello" />,
+        <TextInput.Raw
+          testId="text"
+          onChange={onChange}
+          defaultValue="hello"
+        />,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="text"]`);
+      const input = getByTestId(container, "text");
       invariant(input, "must exists");
 
       fireEvent.change(input, { target: { value: "world" } });
+
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(allDataOfMockCall(onChange, 1)).toEqual([
         "world",
-        [{ op: "replace", path: ["text"], value: "world" }],
+        [{ op: "replace", path: [], value: "world" }],
       ]);
     });
 
@@ -246,8 +241,6 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await waitNextTick();
-
       let firstInput = getByTestId(container, "input:1");
 
       const form = container.querySelector(`form`);
@@ -256,6 +249,7 @@ describe("sigform", () => {
       expect(onChange).toHaveBeenCalledTimes(0);
 
       fireEvent.change(firstInput, { target: { value: "goodbye" } });
+
       expect(firstInput).toHaveValue("goodbye");
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -314,9 +308,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="propA"]`);
+      const input = getByTestId(container, "propA");
       invariant(input, "must exists");
 
       const form = container.querySelector(`form`);
@@ -325,6 +317,7 @@ describe("sigform", () => {
       expect(onChange).toHaveBeenCalledTimes(0);
 
       fireEvent.change(input, { target: { value: "world" } });
+
       expect(onChange).toHaveBeenCalledTimes(1);
 
       expect(input).toHaveValue("world");
@@ -341,40 +334,46 @@ describe("sigform", () => {
     it("should handle field error", async () => {
       const { container } = render(
         <SigForm onChange={onChange} onSubmit={onSubmit}>
-          <TextInput name="text" testId="text" defaultValue="hello" />
-          <TextInput name="text2" testId="text2" defaultValue="world" />
+          {(helpers) => {
+            return (
+              <>
+                <TextInput testId="text" name="text" defaultValue="hello" />
+                <TextInput testId="text2" name="text2" defaultValue="world" />
 
-          <button type="submit">submit</button>
+                <button type="submit">submit</button>
+              </>
+            );
+          }}
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="text"]`);
+      const input = getByTestId(container, "text");
       invariant(input, "must exists");
       expect(input).toHaveValue("hello");
 
       fireEvent.change(input, { target: { value: "invalid" } });
+
       expect(input).toHaveValue("invalid");
 
-      const input2 = container.querySelector(`input[name="text2"]`);
+      const input2 = getByTestId(container, "text2");
       invariant(input2, "must exists");
       expect(input2).toHaveValue("world");
 
       fireEvent.change(input2, { target: { value: "invalid" } });
       expect(input2).toHaveValue("invalid");
 
-      await waitNextTick();
-
       const error = getByTestId(container, "text:error");
       invariant(error, "must exists");
       expect(error.textContent).toEqual("invalid value");
 
-      const error2 = getByTestId(container, "text2:error");
+      let error2 = getByTestId(container, "text2:error");
       invariant(error2, "must exists");
       expect(error2.textContent).toEqual("invalid value");
 
-      expect(onChange).toHaveBeenCalledTimes(2);
+      fireEvent.change(input2, { target: { value: "valid" } });
+      expect(input2).toHaveValue("valid");
+
+      expect(onChange).toHaveBeenCalledTimes(3);
       expect(dataOfMockCall(onChange, 1)).toEqual({
         text: "invalid",
         text2: "world",
@@ -383,6 +382,12 @@ describe("sigform", () => {
         text: "invalid",
         text2: "invalid",
       });
+      expect(dataOfMockCall(onChange, 3)).toEqual({
+        text: "invalid",
+        text2: "valid",
+      });
+
+      expect(queryByTestId(container, "text2:error")).not.toBeInTheDocument();
     });
   });
 
@@ -399,20 +404,19 @@ describe("sigform", () => {
     it("should handle date input", async () => {
       const { container } = render(
         <SigForm onChange={onChange} onSubmit={onSubmit}>
-          <DateInput name="date" defaultValue={new Date()} />
+          <DateInput testId="date" name="date" defaultValue={new Date()} />
 
           <button type="submit">submit</button>
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="date"]`);
+      const input = getByTestId(container, "date");
       invariant(input, "must exists");
 
       expect(onChange).toHaveBeenCalledTimes(0);
 
       fireEvent.change(input, { target: { value: "2023-12-01" } });
+
       expect(onChange).toHaveBeenCalledTimes(1);
 
       expect(input).toHaveValue("2023-12-01");
@@ -434,10 +438,10 @@ describe("sigform", () => {
     });
 
     it("should handle renderProps", async () => {
-      const fn = jest.fn((props: any) => {
+      const fn = jest.fn((helpers: SigFormHelpers) => {
         return (
           <>
-            <TextInput name="text" defaultValue="hello" />
+            <TextInput name="text" defaultValue="hello" testId="text" />
 
             <button type="submit">submit</button>
           </>
@@ -450,9 +454,7 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await waitNextTick();
-
-      const input = container.querySelector(`input[name="text"]`);
+      const input = getByTestId(container, "text");
       invariant(input, "must exists");
       expect(input).toHaveValue("hello");
 
@@ -460,21 +462,25 @@ describe("sigform", () => {
       invariant(form, "must exists");
 
       fireEvent.change(input, { target: { value: "world" } });
+
       expect(input).toHaveValue("world");
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(dataOfMockCall(onChange, 1)).toEqual({ text: "world" });
 
       // Should have renderProps called with helpers.
-      expect(fn).toHaveBeenCalledTimes(4);
+      expect(fn).toHaveBeenCalledTimes(3);
       expect(Object.keys(fn.mock.calls[0][0])).toEqual([
         "setFormErrors",
         "clearFormErrors",
         "resetFormValue",
         "setFieldValues",
-        "data",
+        "register",
+        "root",
       ]);
-      expect(fn.mock.calls[3][0]["data"]).toEqual({ text: "world" });
+      expect(fn.mock.calls[2][0]["root"]).toEqual({
+        text: "world",
+      });
     });
 
     it("should handle renderProps helpers", async () => {
@@ -482,6 +488,7 @@ describe("sigform", () => {
 
       const fn = jest.fn((_helpers: SigFormHelpers) => {
         helpers = _helpers;
+
         return (
           <>
             <TextInput name="text" defaultValue="hello" />
@@ -498,43 +505,42 @@ describe("sigform", () => {
         </SigForm>,
       );
 
-      await waitNextTick();
-
       // Should have renderProps called with helpers.
-      expect(fn).toHaveBeenCalledTimes(3);
+      expect(fn).toHaveBeenCalledTimes(2);
       expect(Object.keys(fn.mock.calls[0][0])).toEqual([
         "setFormErrors",
         "clearFormErrors",
         "resetFormValue",
         "setFieldValues",
-        "data",
+        "register",
+        "root",
       ]);
-      expect(fn.mock.calls[2][0]["data"]).toEqual({
+      expect(fn.mock.calls[1][0]["root"]).toEqual({
         text: "hello",
         text2: "world",
       });
 
-      helpers!.resetFormValue({
+      await act(() => {
+        helpers!.resetFormValue({
+          text: "updated",
+          text2: "updated2",
+        });
+      });
+
+      expect(fn).toHaveBeenCalledTimes(3);
+      expect(fn.mock.calls[2][0]["root"]).toEqual({
         text: "updated",
         text2: "updated2",
       });
 
-      await waitNextTick();
+      await act(() => {
+        helpers!.setFieldValues({
+          text: "updated3",
+        });
+      });
 
       expect(fn).toHaveBeenCalledTimes(4);
-      expect(fn.mock.calls[3][0]["data"]).toEqual({
-        text: "updated",
-        text2: "updated2",
-      });
-
-      helpers!.setFieldValues({
-        text: "updated3",
-      });
-
-      await waitNextTick();
-
-      expect(fn).toHaveBeenCalledTimes(5);
-      expect(fn.mock.calls[4][0]["data"]).toEqual({
+      expect(fn.mock.calls[3][0]["root"]).toEqual({
         text: "updated3",
         text2: "updated2",
       });

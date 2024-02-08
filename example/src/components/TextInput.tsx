@@ -6,7 +6,7 @@ import { sigfield } from "sigform";
 export const TextInput = sigfield<
   { className?: string; testId?: string },
   string
->((props, ref) => {
+>((props) => {
   const { className, value, setValue, error } = props;
 
   return (
@@ -19,7 +19,6 @@ export const TextInput = sigfield<
         )}
         type="text"
         data-testid={props.testId || ""}
-        ref={ref}
         onChange={(e) => setValue(e.target.value)}
         value={value}
       />

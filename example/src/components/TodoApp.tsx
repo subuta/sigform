@@ -18,13 +18,13 @@ type Todo = {
 const TodoInput = sigfield<
   { className?: string; onRemove: (todo: Todo) => void },
   Todo
->((props, ref) => {
+>((props) => {
   const { className = "", onRemove, value, mutate, error } = props;
 
   const todo = value;
 
   return (
-    <div className={cx(className, "flex items-start")} ref={ref}>
+    <div className={cx(className, "flex items-start")}>
       <TextInput.Raw
         onChange={(task) => {
           mutate((draft) => {
@@ -80,7 +80,7 @@ const TodoInput = sigfield<
 });
 
 // Input field for TODO array type.
-export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
+export const TodoApp = sigfield<{}, Todo[], string[]>((props) => {
   let { value, defaultValue, helpers, mutate, error } = props;
 
   const todos = value ?? defaultValue;
@@ -89,12 +89,12 @@ export const TodoApp = sigfield<{}, Todo[], string[]>((props, ref) => {
   // Field level validation example.
   useEffect(() => {
     if (todos[0] && todos[0].task === "hoge") {
-      helpers.setFieldError(["fuga"]);
+      helpers?.setFieldError(["fuga"]);
     }
   }, [todos]);
 
   return (
-    <div className="p-4 bg-gray-100 rounded-lg" ref={ref}>
+    <div className="p-4 bg-gray-100 rounded-lg">
       {isEmpty ? (
         <p>No task</p>
       ) : (

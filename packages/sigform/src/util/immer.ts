@@ -1,4 +1,5 @@
-import { Patch, produceWithPatches } from "immer";
+import { set } from "./lodash";
+import { Patch, produce, produceWithPatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
 
 export const wrapPatches = (patches: Patch[], name: string | number | null) => {
@@ -32,16 +33,19 @@ const produceWithWrappedPatches = <T>(state: any, recipe: Producer<T>) => {
   return [nextState, patches];
 };
 
-export const mutate = <T>(
-  state: any,
-  recipe: Producer<T>,
-  name: string | number | null = null,
-): [T, Patch[]] => {
+export const mutate = <T>(state: any, recipe: Producer<T>): [T, Patch[]] => {
   const [nextState, patches] = produceWithWrappedPatches(state, recipe);
-
-  if (name !== null) {
-    wrapPatches(patches, name);
-  }
-
   return [nextState, patches];
 };
+
+// set values into obj accepts flatten "dot notation"(eg: "hoge.fuga") key.
+export const mergeFlatten = (
+  obj: Record<string, any>,
+  flattenValues: Record<string, any>,
+) =>
+  produce(obj, (draft) => {
+    const keys = Object.keys(flattenValues);
+    keys.forEach((field) => {
+      set(draft, field, flattenValues[field]);
+    });
+  });

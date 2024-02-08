@@ -1,7 +1,5 @@
 import { TodoApp } from "@/components/TodoApp";
-import cx from "classnames";
 import React from "react";
-import { SigForm } from "sigform";
 
 export default function Index() {
   return (

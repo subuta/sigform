@@ -6,11 +6,11 @@ type Data = {
   id: string;
   value: string;
 };
-export const ArrayInput = sigfield<{}, Data[]>((props, ref) => {
+export const ArrayInput = sigfield<{}, Data[]>((props) => {
   const { mutate, value: array } = props;
 
   return (
-    <div className="p-4 bg-blue-400" ref={ref}>
+    <div className="p-4 bg-blue-400">
       {array.map((data, i) => {
         return (
           <React.Fragment key={data.id}>

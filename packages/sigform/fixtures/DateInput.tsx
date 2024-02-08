@@ -1,6 +1,7 @@
 import { sigfield } from "../src";
 import cx from "classnames";
 import React from "react";
+import invariant from "tiny-invariant";
 
 const isInvalidDate = (date: Date) => Number.isNaN(date.getTime());
 
@@ -20,8 +21,8 @@ const parseDate = (ymd: string): Date | null => {
 export const DateInput = sigfield<
   { testId?: string; className?: string },
   Date | null
->((props, ref) => {
-  const { name, setValue, value: rawValue, className = "" } = props;
+>((props) => {
+  const { setValue, value: rawValue, className = "", testId } = props;
 
   let value = "";
   if (rawValue instanceof Date && !isInvalidDate(rawValue)) {
@@ -30,11 +31,19 @@ export const DateInput = sigfield<
 
   return (
     <input
-      ref={ref}
       className={cx("px-2 py-1 border rounded h-[34px]", className)}
-      name={name}
+      data-testid={testId}
       type="date"
-      onChange={(e) => setValue(parseDate(e.target.value))}
+      onChange={(e) => {
+        const value = e.target.value;
+        if (value) {
+          const date = parseDate(value);
+          invariant(date, "must exists");
+          setValue(date);
+        } else {
+          setValue(null);
+        }
+      }}
       value={value}
     />
   );

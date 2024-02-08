@@ -2,8 +2,6 @@
 
 Nestable react form UI for allowing developer to construct complex form UI without hassle.
 
-Current `v0.12.x` is alpha(frequently updating) version. be careful to use it.
-
 ```bash
 # For npm
 npm i react sigform

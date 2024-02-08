@@ -1,4 +1,3 @@
-import { produce } from "immer";
 import invariant from "tiny-invariant";
 
 // SEE: [You Might Not Need Lodash](https://youmightnotneed.com/lodash#get)
@@ -35,15 +34,3 @@ export const set = (obj: Record<string, any>, path: string, value: any) => {
     return acc[key];
   }, obj);
 };
-
-// set values into obj accepts flatten "dot notation"(eg: "hoge.fuga") key.
-export const mergeFlatten = (
-  obj: Record<string, any>,
-  flattenValues: Record<string, any>,
-) =>
-  produce(obj, (draft) => {
-    const keys = Object.keys(flattenValues);
-    keys.forEach((field) => {
-      set(draft, field, flattenValues[field]);
-    });
-  });

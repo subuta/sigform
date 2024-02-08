@@ -26,7 +26,7 @@ export default function Index() {
 
           if (specialCommand === "clear") {
             // Clear values.
-            helpers.setFormValues({ todos: [] });
+            helpers.setFieldValues({ todos: [] });
             return;
           }
 
@@ -36,7 +36,7 @@ export default function Index() {
           console.log("save!", JSON.stringify(data, null, 2));
         }}
       >
-        {(props) => {
+        {({ register }) => {
           return (
             <>
               {/* For usage with form */}

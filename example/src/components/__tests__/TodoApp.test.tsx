@@ -1,12 +1,7 @@
 import { TodoApp } from "@/components/TodoApp";
 import { jest } from "@jest/globals";
 import "@testing-library/jest-dom";
-import {
-  fireEvent,
-  getByTestId,
-  render,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, getByTestId, render } from "@testing-library/react";
 import React, { useState } from "react";
 import { SigForm } from "sigform";
 
@@ -19,24 +14,23 @@ const dataOfMockCall = (fn: jest.Mock | undefined, nth: number) => {
 export const nextTick = () =>
   new Promise((resolve) => requestAnimationFrame(resolve));
 
-const waitNextTick = () => waitFor(() => nextTick());
-
 describe("TodoApp", () => {
   it("should handle complex remove + add combination", async () => {
     const onChange = jest.fn();
 
     const { container } = render(
       <SigForm onChange={onChange}>
-        <TodoApp
-          name="todos"
-          defaultValue={[
-            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-          ]}
-        />
+        {({ register }) => {
+          return (
+            <TodoApp
+              {...register("todos", [
+                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+              ])}
+            />
+          );
+        }}
       </SigForm>,
     );
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -85,18 +79,21 @@ describe("TodoApp", () => {
 
     const { container } = render(
       <SigForm onSubmit={onSubmit}>
-        <TodoApp
-          name="todos"
-          defaultValue={[
-            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-          ]}
-        />
+        {({ register }) => {
+          return (
+            <>
+              <TodoApp
+                {...register("todos", [
+                  { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+                ])}
+              />
 
-        <button data-testid="submit">submit</button>
+              <button data-testid="submit">submit</button>
+            </>
+          );
+        }}
       </SigForm>,
     );
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -142,16 +139,17 @@ describe("TodoApp", () => {
 
     const { container } = render(
       <SigForm onChange={onChange}>
-        <TodoApp
-          name="todos"
-          defaultValue={[
-            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-          ]}
-        />
+        {({ register }) => {
+          return (
+            <TodoApp
+              {...register("todos", [
+                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+              ])}
+            />
+          );
+        }}
       </SigForm>,
     );
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -209,7 +207,7 @@ describe("TodoApp", () => {
       ]);
 
       return (
-        <TodoApp.Raw
+        <TodoApp
           onChange={(...args) => {
             onChange(...args);
             setTodos(args[0]);
@@ -220,8 +218,6 @@ describe("TodoApp", () => {
     };
 
     const { container } = render(<TestApp />);
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -258,15 +254,13 @@ describe("TodoApp", () => {
     const onChange = jest.fn();
 
     const { container } = render(
-      <TodoApp.Raw
+      <TodoApp
         onChange={onChange}
         defaultValue={[
           { id: 1, task: "buy egg", done: false, dueDate: new Date() },
         ]}
       />,
     );
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -314,16 +308,17 @@ describe("TodoApp", () => {
           }
         }}
       >
-        <TodoApp
-          name="todos"
-          defaultValue={[
-            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-          ]}
-        />
+        {({ register }) => {
+          return (
+            <TodoApp
+              {...register("todos", [
+                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+              ])}
+            />
+          );
+        }}
       </SigForm>,
     );
-
-    await waitNextTick();
 
     let input = getByTestId(container, "input:1");
     expect(input).toHaveValue("buy egg");
@@ -331,9 +326,6 @@ describe("TodoApp", () => {
     input = getByTestId(container, "input:1");
     fireEvent.change(input, { target: { value: "invalid" } });
     expect(input).toHaveValue("invalid");
-
-    // Needs to wait here because setFormErrors is debounced.
-    await waitNextTick();
 
     expect(dataOfMockCall(onChange, 1)).toEqual({
       todos: [
