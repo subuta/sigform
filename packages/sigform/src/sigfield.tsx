@@ -16,6 +16,8 @@ export type SigfieldHelpers = Pick<
 };
 
 export type SigfieldProps<P, T, E = string> = P & {
+  // Passed name (optional for Raw component).
+  name?: string;
   // Mutator
   mutate: (recipe: Producer<T>) => void;
   // Set value
@@ -49,7 +51,9 @@ export type RawFieldProps<T, E> = OuterFieldProps<T, E> & {
 export const sigfield = <P = any, T = any, E = string>(
   Component: (props: SigfieldProps<P, T, E>) => JSX.Element,
 ) => {
-  const Raw = (props: Omit<P, "onChange" | "value"> & RawFieldProps<T, E>) => {
+  const Raw = (
+    props: Omit<P, "onChange" | "name" | "value"> & RawFieldProps<T, E>,
+  ) => {
     const { defaultValue, value, onChange, error, ...rest } = props;
 
     // Use internal "state" for "defaultValue-only" scenario.
@@ -80,11 +84,17 @@ export const sigfield = <P = any, T = any, E = string>(
 
   // Use "name & defaultValue" IF (FormField) as default renderer.
   const render = (
-    props: Omit<P, "onChange" | "value"> & FormFieldProps<T, E>,
+    props: Omit<P, "onChange" | "name" | "value"> & FormFieldProps<T, E>,
   ) => {
     const ctx = useSigformContext();
     const { defaultValue, name, helpers, ...rest } = props;
-    return <Raw {...ctx.register(name, defaultValue)} {...(rest as any)} />;
+    return (
+      <Raw
+        {...ctx.register(name, defaultValue)}
+        name={name}
+        {...(rest as any)}
+      />
+    );
   };
 
   // Also expose "Component.Raw" renderer for traditional "onChange & value" usage (& nested field).
