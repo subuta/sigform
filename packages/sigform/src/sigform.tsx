@@ -6,6 +6,7 @@ import {
 } from "./context";
 import React, {
   ComponentType,
+  ReactNode,
   forwardRef,
   useCallback,
   useEffect,
@@ -29,7 +30,7 @@ const sigform = <P,>(Component: ComponentType<P>) => {
 };
 
 type ChildrenProps = {
-  children: ((props: SigFormHelpers) => React.ReactNode) | React.ReactNode;
+  children: ((props: SigFormHelpers) => ReactNode) | ReactNode;
 };
 
 export const SigForm = sigform(

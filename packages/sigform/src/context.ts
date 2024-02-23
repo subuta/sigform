@@ -20,8 +20,28 @@ const useSigform = () => {
     name: "root",
   });
   const [errors, setErrors] = useState<SigFormErrors>({});
-  const onChangeRef = useRef<Dispatch<SetStateAction<any>>>();
+  const onChangeRef = useRef<Dispatch<SetStateAction<any>> | null>();
+
   const defaultValueQueue = useRef<any>({});
+  const patchesQueue = useRef<Patch[]>([]);
+
+  const hasFormMounted = !!onChangeRef.current;
+  const applyOrQueuePatches = (patches: Patch[] = []) => {
+    patchesQueue.current = patchesQueue.current.concat(patches);
+
+    if (hasFormMounted) {
+      setRoot((root) => {
+        const nextState = produce(root, (draft: any) => {
+          applyPatches(draft.value, patchesQueue.current);
+        });
+        // Emit form.onChange if defined.
+        onChangeRef.current && onChangeRef.current(nextState.value);
+        // Empty patchesQueue after processed.
+        patchesQueue.current = [];
+        return nextState;
+      });
+    }
+  };
 
   const registerForm = function <T>(onChange?: Dispatch<SetStateAction<T>>) {
     onChangeRef.current = onChange;
@@ -31,6 +51,8 @@ const useSigform = () => {
         draft.value = mergeFlatten(draft.value, defaultValueQueue.current);
       });
     });
+    // Apply queued patches on mount.
+    applyOrQueuePatches();
   };
 
   const propagateChange = (field: Field<any>, patches: Patch[]) => {
@@ -38,12 +60,7 @@ const useSigform = () => {
     const last = names.pop();
     // Stop if reached at root.
     if (last === "root") {
-      const nextState = produce(root, (draft: any) => {
-        applyPatches(draft.value, patches);
-      });
-      setRoot(nextState);
-      // Emit form.onChange if defined.
-      onChangeRef.current && onChangeRef.current(nextState.value);
+      applyOrQueuePatches(patches);
       return;
     }
 
@@ -62,9 +79,9 @@ const useSigform = () => {
     setErrors((errors) => mergeFlatten(errors, formErrors));
   };
 
-  const clearFormErrors = useCallback(() => {
+  const clearFormErrors = () => {
     setErrors({});
-  }, []);
+  };
 
   // Reset whole form with provided value.
   const resetFormValue = (data: any) => {

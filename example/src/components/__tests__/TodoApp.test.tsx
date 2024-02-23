@@ -20,15 +20,12 @@ describe("TodoApp", () => {
 
     const { container } = render(
       <SigForm onChange={onChange}>
-        {({ register }) => {
-          return (
-            <TodoApp
-              {...register("todos", [
-                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-              ])}
-            />
-          );
-        }}
+        <TodoApp
+          name="todos"
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
+        />
       </SigForm>,
     );
 
@@ -79,19 +76,14 @@ describe("TodoApp", () => {
 
     const { container } = render(
       <SigForm onSubmit={onSubmit}>
-        {({ register }) => {
-          return (
-            <>
-              <TodoApp
-                {...register("todos", [
-                  { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-                ])}
-              />
+        <TodoApp
+          name="todos"
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
+        />
 
-              <button data-testid="submit">submit</button>
-            </>
-          );
-        }}
+        <button data-testid="submit">submit</button>
       </SigForm>,
     );
 
@@ -139,15 +131,12 @@ describe("TodoApp", () => {
 
     const { container } = render(
       <SigForm onChange={onChange}>
-        {({ register }) => {
-          return (
-            <TodoApp
-              {...register("todos", [
-                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-              ])}
-            />
-          );
-        }}
+        <TodoApp
+          name="todos"
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
+        />
       </SigForm>,
     );
 
@@ -207,7 +196,7 @@ describe("TodoApp", () => {
       ]);
 
       return (
-        <TodoApp
+        <TodoApp.Raw
           onChange={(...args) => {
             onChange(...args);
             setTodos(args[0]);
@@ -254,7 +243,7 @@ describe("TodoApp", () => {
     const onChange = jest.fn();
 
     const { container } = render(
-      <TodoApp
+      <TodoApp.Raw
         onChange={onChange}
         defaultValue={[
           { id: 1, task: "buy egg", done: false, dueDate: new Date() },
@@ -308,15 +297,12 @@ describe("TodoApp", () => {
           }
         }}
       >
-        {({ register }) => {
-          return (
-            <TodoApp
-              {...register("todos", [
-                { id: 1, task: "buy egg", done: false, dueDate: new Date() },
-              ])}
-            />
-          );
-        }}
+        <TodoApp
+          name="todos"
+          defaultValue={[
+            { id: 1, task: "buy egg", done: false, dueDate: new Date() },
+          ]}
+        />
       </SigForm>,
     );
 

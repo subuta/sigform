@@ -2,7 +2,7 @@ import { DateInput } from "./DateInput";
 import { TextInput } from "./TextInput";
 import cx from "classnames";
 import _ from "lodash";
-import React, { useEffect } from "react";
+import React, { forwardRef, useEffect } from "react";
 import { sigfield } from "sigform";
 
 const buttonClass = "px-2 py-1 rounded border";
@@ -80,66 +80,69 @@ const TodoInput = sigfield<
 });
 
 // Input field for TODO array type.
-export const TodoApp = sigfield<{}, Todo[], string[]>((props) => {
-  let { value, defaultValue, helpers, mutate, error } = props;
+export const TodoApp = sigfield<{}, Todo[], string[], HTMLDivElement>(
+  // You can use "forwardRef" here for expose "ref" (by passing 4th generic parameter to "sigfield" call)
+  forwardRef((props, ref) => {
+    let { value, defaultValue, helpers, mutate, error } = props;
 
-  const todos = value ?? defaultValue;
-  const isEmpty = todos.length === 0;
+    const todos = value ?? defaultValue;
+    const isEmpty = todos.length === 0;
 
-  // Field level validation example.
-  useEffect(() => {
-    if (todos[0] && todos[0].task === "hoge") {
-      helpers?.setFieldError(["fuga"]);
-    }
-  }, [todos]);
+    // Field level validation example.
+    useEffect(() => {
+      if (todos[0] && todos[0].task === "hoge") {
+        helpers?.setFieldError(["fuga"]);
+      }
+    }, [todos]);
 
-  return (
-    <div className="p-4 bg-gray-100 rounded-lg">
-      {isEmpty ? (
-        <p>No task</p>
-      ) : (
-        todos.map((todo, i) => {
-          const isLast = i === todos.length - 1;
+    return (
+      <div className="p-4 bg-gray-100 rounded-lg" ref={ref}>
+        {isEmpty ? (
+          <p>No task</p>
+        ) : (
+          todos.map((todo, i) => {
+            const isLast = i === todos.length - 1;
 
-          return (
-            <TodoInput.Raw
-              error={props.error && props.error[i]}
-              className={isLast ? "" : "mb-4"}
-              key={todo.id}
-              onChange={(todo) => {
-                mutate((draft) => {
-                  draft[i] = todo;
-                });
-              }}
-              value={todo}
-              onRemove={({ id }) => {
-                mutate((draft) => {
-                  return draft.filter((t) => t.id !== todo.id);
-                });
-              }}
-            />
-          );
-        })
-      )}
+            return (
+              <TodoInput.Raw
+                error={props.error && props.error[i]}
+                className={isLast ? "" : "mb-4"}
+                key={todo.id}
+                onChange={(todo) => {
+                  mutate((draft) => {
+                    draft[i] = todo;
+                  });
+                }}
+                value={todo}
+                onRemove={({ id }) => {
+                  mutate((draft) => {
+                    return draft.filter((t) => t.id !== todo.id);
+                  });
+                }}
+              />
+            );
+          })
+        )}
 
-      <button
-        type="button"
-        data-testid="button:append"
-        className={cx(buttonClass, "mt-4 bg-white")}
-        onClick={() => {
-          const nextId = (_.max(_.map(todos, "id")) || 0) + 1;
-          mutate((draft) => {
-            draft.push({
-              id: nextId,
-              task: "",
-              done: false,
-              dueDate: new Date(),
+        <button
+          type="button"
+          data-testid="button:append"
+          className={cx(buttonClass, "mt-4 bg-white")}
+          onClick={() => {
+            const nextId = (_.max(_.map(todos, "id")) || 0) + 1;
+            mutate((draft) => {
+              draft.push({
+                id: nextId,
+                task: "",
+                done: false,
+                dueDate: new Date(),
+              });
             });
-          });
-        }}
-      >
-        Add TODO
-      </button>
-    </div>
-  );
-});
+          }}
+        >
+          Add TODO
+        </button>
+      </div>
+    );
+  }),
+);

@@ -2,7 +2,17 @@ import { SigFormContextHelpers, useSigformContext } from "./context";
 import { mutate } from "./util";
 import { Patch, enablePatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
-import React, { useState } from "react";
+import React, {
+  ForwardRefExoticComponent,
+  ForwardRefRenderFunction,
+  NamedExoticComponent,
+  PropsWithoutRef,
+  ReactNode,
+  RefAttributes,
+  WeakValidationMap,
+  forwardRef,
+  useState,
+} from "react";
 
 enablePatches();
 
@@ -48,12 +58,23 @@ export type RawFieldProps<T, E> = OuterFieldProps<T, E> & {
   error?: E;
 };
 
-export const sigfield = <P = any, T = any, E = string>(
-  Component: (props: SigfieldProps<P, T, E>) => JSX.Element,
+// Extend "ForwardRefExoticComponent" with "Raw" for allowing "Component.Raw" syntax works with "forwardRef()".
+interface ForwardRefExoticComponentWithRaw<P, R>
+  extends ForwardRefExoticComponent<P> {
+  Raw: R;
+}
+
+export const sigfield = <P = any, T = any, E = string, Ref = any>(
+  Component:
+    | ((props: SigfieldProps<P, T, E>) => ReactNode)
+    | ForwardRefExoticComponent<
+        PropsWithoutRef<SigfieldProps<P, T, E>> & RefAttributes<Ref>
+      >,
 ) => {
-  const Raw = (
-    props: Omit<P, "onChange" | "name" | "value"> & RawFieldProps<T, E>,
-  ) => {
+  const Raw = forwardRef<
+    Ref,
+    Omit<P, "onChange" | "name" | "value"> & RawFieldProps<T, E>
+  >((props, ref) => {
     const { defaultValue, value, onChange, error, ...rest } = props;
 
     // Use internal "state" for "defaultValue-only" scenario.
@@ -73,6 +94,7 @@ export const sigfield = <P = any, T = any, E = string>(
     return (
       <Component
         {...(rest as any)}
+        ref={ref}
         error={error}
         mutate={mutateFn}
         setValue={(value: T) => mutateFn(() => value as any)}
@@ -80,12 +102,13 @@ export const sigfield = <P = any, T = any, E = string>(
         defaultValue={defaultValue}
       />
     );
-  };
+  });
+
+  type DefaultRenderProps = Omit<P, "onChange" | "name" | "value"> &
+    FormFieldProps<T, E>;
 
   // Use "name & defaultValue" IF (FormField) as default renderer.
-  const render = (
-    props: Omit<P, "onChange" | "name" | "value"> & FormFieldProps<T, E>,
-  ) => {
+  const render = forwardRef((props: DefaultRenderProps, ref) => {
     const ctx = useSigformContext();
     const { defaultValue, name, helpers, ...rest } = props;
     return (
@@ -93,9 +116,13 @@ export const sigfield = <P = any, T = any, E = string>(
         {...ctx.register(name, defaultValue)}
         name={name}
         {...(rest as any)}
+        ref={ref}
       />
     );
-  };
+  }) as ForwardRefExoticComponentWithRaw<
+    PropsWithoutRef<DefaultRenderProps> & RefAttributes<Ref>,
+    typeof Raw
+  >;
 
   // Also expose "Component.Raw" renderer for traditional "onChange & value" usage (& nested field).
   render.Raw = Raw;
