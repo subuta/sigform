@@ -3,6 +3,7 @@ import { mutate } from "./util";
 import { Patch, enablePatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
 import React, {
+  ComponentType,
   ForwardRefExoticComponent,
   ForwardRefRenderFunction,
   NamedExoticComponent,
@@ -65,11 +66,8 @@ interface ForwardRefExoticComponentWithRaw<P, R>
 }
 
 export const sigfield = <P = any, T = any, E = string, Ref = any>(
-  Component:
-    | ((props: SigfieldProps<P, T, E>) => ReactNode)
-    | ForwardRefExoticComponent<
-        PropsWithoutRef<SigfieldProps<P, T, E>> & RefAttributes<Ref>
-      >,
+  // SEE: [javascript - Typescript: How to type ForwardRefExoticComponent + ComponentType - Stack Overflow](https://stackoverflow.com/a/67084687)
+  Component: ComponentType<SigfieldProps<P, T, E> & React.RefAttributes<Ref>>,
 ) => {
   const Raw = forwardRef<
     Ref,
