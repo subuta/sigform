@@ -85,17 +85,23 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
     const currentValue = value === undefined ? state : value;
 
     const mutateFn = (recipe: Producer<T>) => {
-      let mutateResult: MutateResult<T>;
+      let mutateResults: MutateResult<T>[] = [];
       // Always use latest state.
       setState(
         (state) => {
           const currentValue = value === undefined ? state : value;
-          mutateResult = mutate(currentValue, recipe);
-          return mutateResult[0];
+          const [nextState, patches] = mutate(currentValue, recipe);
+          mutateResults.push([nextState, patches]);
+          return nextState;
         },
         () => {
-          // Run "onChange" after setState is finished.
-          onChange && onChange(mutateResult[0], mutateResult[1]);
+          // TODO: Preserve order of "pushed" results.
+          const result = mutateResults.pop();
+          if (result) {
+            const [nextState, patches] = result;
+            // Run "onChange" after setState is finished.
+            onChange && onChange(nextState, patches);
+          }
         },
       );
     };

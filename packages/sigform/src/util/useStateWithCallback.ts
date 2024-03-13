@@ -21,6 +21,7 @@ export function useStateWithCallback<T>(
   initialValue: T,
 ): [T, (newValue: SetStateAction<T>, callback?: () => void) => void] {
   const [state, setState] = useState<T>(initialValue);
+
   const callbackRef = useRef<() => void | undefined>();
 
   const setStateWithCallback = useCallback(
