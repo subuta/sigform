@@ -1,5 +1,6 @@
 import { SigFormContextHelpers, useSigformContext } from "./context";
-import { mutate } from "./util";
+import { MutateResult, mutate } from "./util";
+import { useStateWithCallback } from "./util/useStateWithCallback";
 import { Patch, enablePatches } from "immer";
 import { Producer } from "immer/src/types/types-external";
 import React, {
@@ -76,7 +77,7 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
     const { defaultValue, value, onChange, error, ...rest } = props;
 
     // Use internal "state" for "defaultValue-only" scenario.
-    const [state, setState] = useState<T | undefined>(
+    const [state, setState] = useStateWithCallback<T | undefined>(
       defaultValue === undefined ? undefined : defaultValue,
     );
 
@@ -84,9 +85,19 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
     const currentValue = value === undefined ? state : value;
 
     const mutateFn = (recipe: Producer<T>) => {
-      const [nextState, patches] = mutate(currentValue, recipe);
-      setState(nextState);
-      onChange && onChange(nextState, patches);
+      let mutateResult: MutateResult<T>;
+      // Always use latest state.
+      setState(
+        (state) => {
+          const currentValue = value === undefined ? state : value;
+          mutateResult = mutate(currentValue, recipe);
+          return mutateResult[0];
+        },
+        () => {
+          // Run "onChange" after setState is finished.
+          onChange && onChange(mutateResult[0], mutateResult[1]);
+        },
+      );
     };
 
     return (

@@ -10,7 +10,7 @@ export default function Index() {
 
   useEffect(() => {
     // sigfield allows to use "forwardRef" also.
-    console.log("ref", ref.current);
+    // console.log("ref", ref.current);
   }, []);
 
   return (

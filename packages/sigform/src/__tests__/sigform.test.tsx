@@ -469,7 +469,7 @@ describe("sigform", () => {
       expect(dataOfMockCall(onChange, 1)).toEqual({ text: "world" });
 
       // Should have renderProps called with helpers.
-      expect(fn).toHaveBeenCalledTimes(3);
+      expect(fn).toHaveBeenCalledTimes(4);
       expect(Object.keys(fn.mock.calls[0][0])).toEqual([
         "setFormErrors",
         "clearFormErrors",
@@ -478,7 +478,7 @@ describe("sigform", () => {
         "register",
         "root",
       ]);
-      expect(fn.mock.calls[2][0]["root"]).toEqual({
+      expect(fn.mock.calls[3][0]["root"]).toEqual({
         text: "world",
       });
     });

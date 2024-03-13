@@ -96,7 +96,7 @@ const useSigform = () => {
   const setFieldValues = (fieldValues: any) => {
     setRoot((root) =>
       produce(root, (draft) => {
-        draft.value = mergeFlatten(root.value, fieldValues);
+        draft.value = mergeFlatten(draft.value, fieldValues);
       }),
     );
   };

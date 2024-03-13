@@ -38,6 +38,8 @@ export const mutate = <T>(state: any, recipe: Producer<T>): [T, Patch[]] => {
   return [nextState, patches];
 };
 
+export type MutateResult<T> = ReturnType<typeof mutate<T>>;
+
 // set values into obj accepts flatten "dot notation"(eg: "hoge.fuga") key.
 export const mergeFlatten = (
   obj: Record<string, any>,
