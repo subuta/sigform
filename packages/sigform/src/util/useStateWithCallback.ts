@@ -19,13 +19,16 @@ import {
  */
 export function useStateWithCallback<T>(
   initialValue: T,
-): [T, (newValue: SetStateAction<T>, callback?: () => void) => void] {
+): [
+  T,
+  (newValue: SetStateAction<T>, callback?: (newValue: T) => void) => void,
+] {
   const [state, setState] = useState<T>(initialValue);
 
-  const callbackRef = useRef<() => void | undefined>();
+  const callbackRef = useRef<(newValue: T) => void | undefined>();
 
   const setStateWithCallback = useCallback(
-    (newValue: SetStateAction<T>, callback?: () => void) => {
+    (newValue: SetStateAction<T>, callback?: (newValue: T) => void) => {
       setState(newValue);
       callbackRef.current = callback;
     },
@@ -33,7 +36,7 @@ export function useStateWithCallback<T>(
   );
 
   useEffect(() => {
-    callbackRef.current && callbackRef.current();
+    callbackRef.current && callbackRef.current(state);
   }, [state]);
 
   return [state, setStateWithCallback];

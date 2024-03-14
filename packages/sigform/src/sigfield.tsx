@@ -77,31 +77,28 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
     const { defaultValue, value, onChange, error, ...rest } = props;
 
     // Use internal "state" for "defaultValue-only" scenario.
-    const [state, setState] = useStateWithCallback<T | undefined>(
+    const initialMutateResult: MutateResult<T | undefined> = [
       defaultValue === undefined ? undefined : defaultValue,
-    );
+      [],
+    ];
+    const [[state], setState] = useStateWithCallback(initialMutateResult);
 
     // "value" which we will work on.
     const currentValue = value === undefined ? state : value;
 
     const mutateFn = (recipe: Producer<T>) => {
-      let mutateResults: MutateResult<T>[] = [];
-      // Always use latest state.
       setState(
-        (state) => {
+        // Always use latest state.
+        ([state]) => {
           const currentValue = value === undefined ? state : value;
-          const [nextState, patches] = mutate(currentValue, recipe);
-          mutateResults.push([nextState, patches]);
-          return nextState;
+          return mutate(currentValue, recipe);
         },
-        () => {
-          // TODO: Preserve order of "pushed" results.
-          const result = mutateResults.pop();
-          if (result) {
-            const [nextState, patches] = result;
-            // Run "onChange" after setState is finished.
-            onChange && onChange(nextState, patches);
-          }
+        (mutateResult) => {
+          // Skip onChange for initial state.
+          if (mutateResult === initialMutateResult) return;
+          const [nextState, patches] = mutateResult;
+          // Run "onChange" after setState is finished.
+          onChange && onChange(nextState as T, patches);
         },
       );
     };
