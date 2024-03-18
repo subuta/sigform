@@ -15,9 +15,7 @@ export const dig = (
 ): Field<any> => {
   const parentValue = parent.value;
   return {
-    value:
-      (parentValue ? get(parentValue, String(name)) : defaultValue) ||
-      undefined,
+    value: parentValue ? get(parentValue, String(name)) : defaultValue,
     name,
     parent,
   };
