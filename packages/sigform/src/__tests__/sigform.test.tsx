@@ -54,6 +54,60 @@ describe("sigform", () => {
       expect(input).toBeChecked();
     });
 
+    it("should handle programmatic update", async () => {
+      const { container } = render(
+        <SigForm>
+          {(helpers) => {
+            const data = helpers.root;
+            return (
+              <>
+                <TextInput
+                  name="disabled"
+                  testId="disabled"
+                  defaultValue="false"
+                />
+                ,
+                <CheckboxInput.Raw
+                  testId="bool"
+                  onChange={(checked) => {
+                    if (data.disabled === "true") {
+                      helpers.setFieldValues({
+                        bool: false,
+                      });
+                      return;
+                    }
+                    helpers.setFieldValues({
+                      bool: checked,
+                    });
+                  }}
+                  value={data.bool || false}
+                />
+                ,
+              </>
+            );
+          }}
+        </SigForm>,
+      );
+
+      const textInput = getByTestId(container, "disabled");
+      const boolInput = getByTestId(container, "bool");
+      expect(boolInput).not.toBeChecked();
+
+      fireEvent.click(boolInput);
+      expect(boolInput).toBeChecked();
+
+      // Reset
+      fireEvent.click(boolInput);
+      expect(boolInput).not.toBeChecked();
+
+      fireEvent.change(textInput, { target: { value: "true" } });
+      expect(textInput).toHaveValue("true");
+
+      // Not checked because "disabled = true".
+      fireEvent.click(boolInput);
+      expect(boolInput).not.toBeChecked();
+    });
+
     it("should handle object defaultValue", async () => {
       const { container } = render(
         <SigForm>
