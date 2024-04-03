@@ -51,6 +51,7 @@ export type OuterFieldProps<T, E> = {
 };
 
 export type FormFieldProps<T, E> = OuterFieldProps<T, E> & {
+  onChange?: (value: T, patches: Patch[]) => void;
   name: string;
 };
 
@@ -72,7 +73,7 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
 ) => {
   const Raw = forwardRef<
     Ref,
-    Omit<P, "onChange" | "name" | "value"> & RawFieldProps<T, E>
+    Omit<P, "onChange" | "value"> & RawFieldProps<T, E>
   >((props, ref) => {
     const { defaultValue, value, onChange, error, ...rest } = props;
 
@@ -116,16 +117,15 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
     );
   });
 
-  type DefaultRenderProps = Omit<P, "onChange" | "name" | "value"> &
-    FormFieldProps<T, E>;
+  type DefaultRenderProps = Omit<P, "name"> & FormFieldProps<T, E>;
 
   // Use "name & defaultValue" IF (FormField) as default renderer.
   const render = forwardRef((props: DefaultRenderProps, ref) => {
     const ctx = useSigformContext();
-    const { defaultValue, name, helpers, ...rest } = props;
+    const { defaultValue, name, helpers, onChange, ...rest } = props;
     return (
       <Raw
-        {...ctx.register(name, defaultValue)}
+        {...ctx.register(name, defaultValue, onChange)}
         name={name}
         {...(rest as any)}
         ref={ref}

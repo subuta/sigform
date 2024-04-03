@@ -110,7 +110,12 @@ const useSigform = () => {
   };
 
   // Register "Raw: onChange & value" component into "SigForm" context.
-  const register = <T>(name: string, defaultValue?: T, parent = root) => {
+  const register = <T>(
+    name: string,
+    defaultValue: T | undefined,
+    onChange: ((value: T, patches: Patch[]) => void) | undefined,
+    parent = root,
+  ) => {
     const field = dig(parent, name);
     const fieldTree = getTree(field);
     const fullFieldName = fieldTree.join(".");
@@ -139,8 +144,11 @@ const useSigform = () => {
     };
 
     // Bind current "field" arg into "register" fn for nested field scenario.
-    helpers.register = (name: string, defaultValue?: T) =>
-      register(name, defaultValue, field);
+    helpers.register = (
+      name: string,
+      defaultValue: T | undefined,
+      onChange: ((value: T, patches: Patch[]) => void) | undefined,
+    ) => register(name, defaultValue, onChange, field);
 
     const error = get(errors, fullFieldName);
 
@@ -150,6 +158,11 @@ const useSigform = () => {
           wrapPatches(patches, name);
         }
         propagateChange(field, patches);
+
+        // Call "onChange" handler passed from component.
+        if (onChange) {
+          onChange(value, patches);
+        }
       },
       value: field.value,
       defaultValue,
