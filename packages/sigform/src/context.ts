@@ -5,11 +5,14 @@ import { Patch, applyPatches, produce } from "immer";
 import {
   Dispatch,
   FormEvent,
+  HTMLProps,
+  ReactNode,
   SetStateAction,
   useCallback,
   useRef,
   useState,
 } from "react";
+import { MouseEvent } from "react";
 import { createContainer } from "unstated-next";
 
 export type SigFormErrors = Record<string, string[] | string | undefined>;
@@ -184,10 +187,13 @@ const useSigform = () => {
   };
 };
 
-export type SigFormComponentProps<P> = P & {
-  className?: string;
+export type SigFormComponentProps = Omit<
+  HTMLProps<HTMLFormElement>,
+  "onChange" | "onSubmit" | "children"
+> & {
   onChange?: (value: any, helpers: SigFormHelpers) => void;
   onSubmit?: (value: any, helpers: SigFormHelpers, event?: FormEvent) => void;
+  children?: ((props: SigFormHelpers) => ReactNode) | ReactNode;
 };
 
 export const SigformContext = createContainer(useSigform);

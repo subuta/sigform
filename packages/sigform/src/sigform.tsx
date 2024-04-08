@@ -1,12 +1,10 @@
 import {
   SigFormComponentProps,
-  SigFormHelpers,
   SigformContext,
   useSigformContext,
 } from "./context";
 import React, {
   ComponentType,
-  ReactNode,
   forwardRef,
   useCallback,
   useEffect,
@@ -19,8 +17,9 @@ export const isEmptyChildren = (children: any): boolean =>
 export const isFunction = (obj: any): obj is Function =>
   typeof obj === "function";
 
-const sigform = <P,>(Component: ComponentType<P>) => {
-  return forwardRef((props: SigFormComponentProps<P>, ref) => {
+const sigform = (Component: ComponentType) => {
+  // use "forwardRef" here for relay ref to "Component", not "Provider".
+  return forwardRef((props: SigFormComponentProps, ref) => {
     return (
       <SigformContext.Provider>
         <Component {...(props as any)} ref={ref} />
@@ -29,13 +28,9 @@ const sigform = <P,>(Component: ComponentType<P>) => {
   });
 };
 
-type ChildrenProps = {
-  children: ((props: SigFormHelpers) => ReactNode) | ReactNode;
-};
-
 export const SigForm = sigform(
-  forwardRef((props: SigFormComponentProps<ChildrenProps>, outerRef) => {
-    const { className = "", onSubmit } = props;
+  forwardRef((props: SigFormComponentProps, outerRef) => {
+    const { onSubmit, onChange, children: childrenProp, ...rest } = props;
 
     const ctx = useSigformContext();
 
@@ -46,7 +41,7 @@ export const SigForm = sigform(
     useEffect(() => {
       // Register form "onChange" into context.
       ctx.registerForm((data) => {
-        props.onChange && props.onChange(data, helpers);
+        onChange && onChange(data, helpers);
       });
     }, []);
 
@@ -69,35 +64,25 @@ export const SigForm = sigform(
     };
 
     let children = null;
-    if (isFunction(props.children)) {
-      children = props.children(helpers);
-    } else if (!isEmptyChildren(props.children)) {
-      children = props.children;
+    if (isFunction(childrenProp)) {
+      children = childrenProp(helpers);
+    } else if (!isEmptyChildren(childrenProp)) {
+      children = childrenProp;
     }
 
-    // Use form only if "onSubmit" specified.
-    if (onSubmit) {
-      return (
-        <form
-          className={className}
-          onSubmit={(e) => {
-            // Prevent default "form submit"
-            e.preventDefault();
-            // And handle form submission by user defined 'onSubmit' handler.
-            onSubmit && onSubmit(root, helpers, e);
-          }}
-          ref={handleRef}
-        >
-          {children}
-        </form>
-      );
-    }
-
-    // Or defaults to "div" which allow nesting.
     return (
-      <div className={className} ref={handleRef}>
+      <form
+        {...rest}
+        onSubmit={(e) => {
+          // Prevent default "form submit"
+          e.preventDefault();
+          // And handle form submission by user defined 'onSubmit' handler.
+          onSubmit && onSubmit(root, helpers, e);
+        }}
+        ref={handleRef}
+      >
         {children}
-      </div>
+      </form>
     );
   }),
 );
