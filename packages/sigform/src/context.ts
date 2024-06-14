@@ -97,11 +97,14 @@ const useSigform = () => {
 
   // Set multiple field values at once (without reset)
   const setFieldValues = (fieldValues: any) => {
-    setRoot((root) =>
-      produce(root, (draft) => {
+    setRoot((root) => {
+      const nextState = produce(root, (draft) => {
         draft.value = mergeFlatten(draft.value, fieldValues);
-      }),
-    );
+      });
+      // Emit form.onChange if defined.
+      onChangeRef.current && onChangeRef.current(nextState.value);
+      return nextState;
+    });
   };
 
   const queueDefaultValueOfField = (

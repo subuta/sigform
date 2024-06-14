@@ -33,7 +33,9 @@ export default function Index() {
 
           if (specialCommand === "clear") {
             // Clear values.
-            helpers.setFieldValues({ todos: [] });
+            requestAnimationFrame(() => {
+              helpers.setFieldValues({ todos: [] });
+            });
             return;
           }
 
