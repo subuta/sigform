@@ -1,5 +1,5 @@
 import { OuterFieldProps, SigfieldHelpers } from "./sigfield";
-import { get, mergeFlatten, set, wrapPatches } from "./util";
+import { get, mergeFlatten, wrapPatches } from "./util";
 import { Field, dig, getTree } from "./util/fieldTree";
 import { Patch, applyPatches, produce } from "immer";
 import {
@@ -8,11 +8,9 @@ import {
   HTMLProps,
   ReactNode,
   SetStateAction,
-  useCallback,
   useRef,
   useState,
 } from "react";
-import { MouseEvent } from "react";
 import { createContainer } from "unstated-next";
 
 export type SigFormErrors = Record<string, string[] | string | undefined>;
@@ -96,13 +94,15 @@ const useSigform = () => {
   };
 
   // Set multiple field values at once (without reset)
-  const setFieldValues = (fieldValues: any) => {
+  const setFieldValues = (fieldValues: any, skipOnChange = false) => {
     setRoot((root) => {
       const nextState = produce(root, (draft) => {
         draft.value = mergeFlatten(draft.value, fieldValues);
       });
       // Emit form.onChange if defined.
-      onChangeRef.current && onChangeRef.current(nextState.value);
+      if (!skipOnChange) {
+        onChangeRef.current && onChangeRef.current(nextState.value);
+      }
       return nextState;
     });
   };
@@ -140,6 +140,13 @@ const useSigform = () => {
       setFieldValues({ [fullFieldName]: rawData });
     };
 
+    const setDefaultValue = (defaultValue: any) => {
+      const currentValue = get(root.value, fullFieldName) || undefined;
+      if (currentValue === undefined) {
+        setFieldValues({ [fullFieldName]: defaultValue }, true);
+      }
+    };
+
     const helpers: Partial<SigfieldHelpers> = {
       clearFormErrors,
       resetFormValue,
@@ -147,6 +154,7 @@ const useSigform = () => {
       setFieldError,
       clearFieldError,
       setFieldValue,
+      setDefaultValue,
     };
 
     // Bind current "field" arg into "register" fn for nested field scenario.

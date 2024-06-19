@@ -1,21 +1,18 @@
 import { SigFormContextHelpers, useSigformContext } from "./context";
 import { MutateResult, mutate } from "./util";
 import { useStateWithCallback } from "./util/useStateWithCallback";
-import { Patch, enablePatches } from "immer";
+import { Patch, enablePatches, setAutoFreeze } from "immer";
 import { Producer } from "immer/src/types/types-external";
 import React, {
   ComponentType,
   ForwardRefExoticComponent,
-  ForwardRefRenderFunction,
-  NamedExoticComponent,
   PropsWithoutRef,
-  ReactNode,
   RefAttributes,
-  WeakValidationMap,
   forwardRef,
-  useState,
+  useEffect,
 } from "react";
 
+setAutoFreeze(false);
 enablePatches();
 
 export type SigfieldHelpers = Pick<
@@ -25,6 +22,7 @@ export type SigfieldHelpers = Pick<
   setFieldError: (formErrors: any) => void;
   clearFieldError: () => void;
   setFieldValue: (rawData: any) => void;
+  setDefaultValue: (defaultValue: any) => void;
 };
 
 export type SigfieldProps<P, T, E = string> = P & {
@@ -123,14 +121,13 @@ export const sigfield = <P = any, T = any, E = string, Ref = any>(
   const render = forwardRef((props: DefaultRenderProps, ref) => {
     const ctx = useSigformContext();
     const { defaultValue, name, helpers, onChange, ...rest } = props;
-    return (
-      <Raw
-        {...ctx.register(name, defaultValue, onChange)}
-        name={name}
-        {...(rest as any)}
-        ref={ref}
-      />
-    );
+    const binding = ctx.register(name, defaultValue, onChange);
+
+    useEffect(() => {
+      binding.helpers?.setDefaultValue(defaultValue);
+    }, []);
+
+    return <Raw {...binding} name={name} {...(rest as any)} ref={ref} />;
   }) as ForwardRefExoticComponentWithRaw<
     PropsWithoutRef<DefaultRenderProps> & RefAttributes<Ref>,
     typeof Raw

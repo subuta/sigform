@@ -12,7 +12,7 @@ export const ObjectInput = sigfield<{}, Data>((props) => {
   return (
     <div className="p-4 bg-blue-400">
       <TextInput.Raw
-        {...helpers?.register("propA", value?.propA)}
+        {...helpers?.register("propA", value?.propA, undefined)}
         testId="propA"
       />
     </div>
